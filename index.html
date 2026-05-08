@@ -14,12 +14,14 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
+            padding: 20px;
         }
 
         h1 {
             color: #37474f;
             margin-bottom: 30px;
             font-size: 2.5rem;
+            text-align: center;
         }
 
         .container {
@@ -27,13 +29,14 @@
             gap: 20px;
             flex-wrap: wrap;
             justify-content: center;
+            max-width: 1000px;
         }
 
         .card {
             background: white;
             border-radius: 20px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            width: 280px;
+            width: 260px;
             padding: 30px;
             text-align: center;
             text-decoration: none;
@@ -46,24 +49,27 @@
             box-shadow: 0 15px 30px rgba(0,0,0,0.15);
         }
 
-        /* 動物園カードのスタイル */
+        /* 動物園カード */
         .card.zoo { border-color: #8bc34a; }
         .card.zoo h2 { color: #2e7d32; }
-        .card.zoo .icon { font-size: 50px; }
 
-        /* 教室カードのスタイル */
+        /* 教室カード */
         .card.classroom { border-color: #ffb74d; }
         .card.classroom h2 { color: #e65100; }
-        .card.classroom .icon { font-size: 50px; }
+
+        /* マーケットカード（追加） */
+        .card.market { border-color: #fdd835; }
+        .card.market h2 { color: #f57f17; }
 
         .icon {
             margin-bottom: 15px;
             display: block;
+            font-size: 50px;
         }
 
         h2 {
             margin: 10px 0;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
         }
 
         p {
@@ -88,6 +94,12 @@
             <span class="icon">🏫</span>
             <h2>English Classroom</h2>
             <p>教室にあるものを探して、<br>身近な英単語をマスターしよう！</p>
+        </a>
+
+        <a href="en_market.html" class="card market">
+            <span class="icon">🍎</span>
+            <h2>Realistic Market</h2>
+            <p>果物や野菜をタップして、<br>単語と日本語訳を覚えよう！</p>
         </a>
     </div>
 
