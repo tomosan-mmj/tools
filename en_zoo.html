@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive English Zoo</title>
+    <title>Interactive English Zoo - Mega Edition</title>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #e0f7fa;
+            background-color: #e8f5e9;
             margin: 0;
             padding: 20px;
         }
-        h1 { color: #2e7d32; margin-bottom: 10px; }
-        p { color: #555; margin-bottom: 20px; }
+        h1 { color: #2e7d32; margin-bottom: 5px; }
+        p { color: #555; margin-bottom: 15px; }
         
         #canvas-container {
             position: relative;
@@ -23,70 +23,165 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             overflow: hidden;
-            border: 8px solid #8bc34a;
+            border: 8px solid #689f38;
         }
 
         svg {
             display: block;
             cursor: pointer;
+            background-color: #9ccc65;
         }
 
+        .animal {
+            transition: transform 0.2s;
+        }
         .animal:hover {
-            filter: brightness(1.2);
-            transition: 0.2s;
+            filter: brightness(1.1);
+            transform: scale(1.01);
+            transform-origin: center;
         }
 
         #word-display {
             margin-top: 20px;
-            font-size: 32px;
+            font-size: 36px;
             font-weight: bold;
             color: #ef6c00;
-            height: 40px;
+            height: 45px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
+
+        .label-bg { fill: rgba(255,255,255,0.7); rx: 5; ry: 5; }
     </style>
 </head>
 <body>
 
     <h1>Interactive English Zoo</h1>
-    <p>動物をタップして、英語の発音を聴いてみよう！</p>
+    <p>もっとたくさんの動物をタップして、英語を聴いてみよう！</p>
 
     <div id="canvas-container">
-        <svg width="800" height="500" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
-            <rect width="800" height="500" fill="#9ccc65" />
-            <path d="M0 200 Q 400 250 800 200 L 800 300 Q 400 350 0 300 Z" fill="#d7ccc8" />
-            
-            <ellipse cx="150" cy="400" rx="100" ry="60" fill="#4fc3f7" />
-
-            <g class="animal" onclick="speak('Lion')">
-                <circle cx="650" cy="150" r="40" fill="#ffa726" /> <circle cx="650" cy="150" r="25" fill="#ffcc80" /> <circle cx="640" cy="145" r="3" fill="#000" /> <circle cx="660" cy="145" r="3" fill="#000" />
-                <text x="635" y="210" font-size="14" font-weight="bold">Lion</text>
+        <svg width="900" height="650" viewBox="0 0 900 650" xmlns="http://www.w3.org/2000/svg">
+            <rect width="900" height="650" fill="#9ccc65" />
+            <path d="M0 300 Q 450 350 900 300 L 900 400 Q 450 450 0 400 Z" fill="#d7ccc8" />
+            <ellipse cx="150" cy="550" rx="120" ry="70" fill="#4fc3f7" /> <ellipse cx="750" cy="100" rx="100" ry="50" fill="#cfd8dc" /> <g class="animal" onclick="speak('Lion')">
+                <circle cx="750" cy="250" r="35" fill="#ffa726" />
+                <circle cx="750" cy="250" r="22" fill="#ffcc80" />
+                <text x="730" y="305" font-size="14" font-weight="bold">Lion</text>
             </g>
 
             <g class="animal" onclick="speak('Giraffe')">
-                <rect x="100" y="50" width="20" height="120" fill="#fdd835" /> <ellipse cx="120" cy="50" rx="25" ry="15" fill="#fdd835" /> <circle cx="125" cy="45" r="2" fill="#000" />
-                <rect x="100" y="160" width="50" height="40" rx="10" fill="#fdd835" /> <text x="90" y="220" font-size="14" font-weight="bold">Giraffe</text>
+                <rect x="50" y="50" width="15" height="100" fill="#fdd835" />
+                <ellipse cx="65" cy="50" rx="20" ry="12" fill="#fdd835" />
+                <rect x="50" y="140" width="40" height="30" rx="8" fill="#fdd835" />
+                <text x="45" y="190" font-size="14" font-weight="bold">Giraffe</text>
             </g>
 
             <g class="animal" onclick="speak('Elephant')">
-                <rect x="350" y="120" width="100" height="70" rx="20" fill="#90a4ae" /> <circle cx="340" cy="140" r="35" fill="#90a4ae" /> <rect x="290" y="140" width="40" height="15" rx="5" fill="#90a4ae" /> <circle cx="330" cy="130" r="3" fill="#000" />
-                <text x="360" y="210" font-size="14" font-weight="bold">Elephant</text>
+                <rect x="380" y="220" width="80" height="60" rx="15" fill="#90a4ae" />
+                <circle cx="370" cy="240" r="30" fill="#90a4ae" />
+                <rect x="330" y="240" width="35" height="12" rx="5" fill="#90a4ae" />
+                <text x="375" y="300" font-size="14" font-weight="bold">Elephant</text>
             </g>
 
             <g class="animal" onclick="speak('Penguin')">
-                <ellipse cx="150" cy="390" rx="15" ry="25" fill="#263238" /> <ellipse cx="150" cy="395" rx="8" ry="15" fill="#fff" /> <circle cx="150" cy="370" r="10" fill="#263238" /> <text x="125" y="445" font-size="14" font-weight="bold">Penguin</text>
+                <ellipse cx="120" cy="540" rx="12" ry="20" fill="#263238" />
+                <ellipse cx="120" cy="545" rx="7" ry="12" fill="#fff" />
+                <text x="95" y="580" font-size="14" font-weight="bold">Penguin</text>
             </g>
 
             <g class="animal" onclick="speak('Monkey')">
-                <circle cx="550" cy="350" r="20" fill="#8d6e63" /> <circle cx="550" cy="320" r="15" fill="#8d6e63" /> <circle cx="545" cy="318" r="2" fill="#000" />
-                <circle cx="555" cy="318" r="2" fill="#000" />
-                <text x="530" y="385" font-size="14" font-weight="bold">Monkey</text>
+                <circle cx="550" cy="120" r="18" fill="#8d6e63" />
+                <circle cx="550" cy="95" r="13" fill="#8d6e63" />
+                <text x="525" y="155" font-size="14" font-weight="bold">Monkey</text>
             </g>
 
             <g class="animal" onclick="speak('Zebra')">
-                <rect x="680" y="350" width="70" height="45" rx="10" fill="#fff" stroke="#000" /> <line x1="690" y1="350" x2="690" y2="395" stroke="#000" stroke-width="3" />
-                <line x1="710" y1="350" x2="710" y2="395" stroke="#000" stroke-width="3" />
-                <line x1="730" y1="350" x2="730" y2="395" stroke="#000" stroke-width="3" />
-                <circle cx="755" cy="340" r="15" fill="#fff" stroke="#000" /> <text x="700" y="415" font-size="14" font-weight="bold">Zebra</text>
+                <rect x="750" y="480" width="60" height="40" rx="8" fill="#fff" stroke="#000" />
+                <line x1="765" y1="480" x2="765" y2="520" stroke="#000" stroke-width="2" />
+                <line x1="785" y1="480" x2="785" y2="520" stroke="#000" stroke-width="2" />
+                <circle cx="815" cy="475" r="12" fill="#fff" stroke="#000" />
+                <text x="765" y="540" font-size="14" font-weight="bold">Zebra</text>
+            </g>
+
+            <g class="animal" onclick="speak('Tiger')">
+                <circle cx="620" cy="250" r="30" fill="#fb8c00" />
+                <line x1="600" y1="240" x2="615" y2="240" stroke="#000" stroke-width="2" />
+                <line x1="625" y1="240" x2="640" y2="240" stroke="#000" stroke-width="2" />
+                <text x="600" y="300" font-size="14" font-weight="bold">Tiger</text>
+            </g>
+
+            <g class="animal" onclick="speak('Hippo')">
+                <ellipse cx="220" cy="560" rx="40" ry="25" fill="#9fa8da" />
+                <circle cx="185" cy="550" r="20" fill="#9fa8da" />
+                <text x="200" y="605" font-size="14" font-weight="bold">Hippo</text>
+            </g>
+
+            <g class="animal" onclick="speak('Crocodile')">
+                <rect x="50" y="450" width="100" height="20" rx="10" fill="#4caf50" />
+                <rect x="130" y="440" width="30" height="15" rx="5" fill="#4caf50" />
+                <text x="60" y="490" font-size="14" font-weight="bold">Crocodile</text>
+            </g>
+
+            <g class="animal" onclick="speak('Kangaroo')">
+                <path d="M500 480 Q 530 480 540 540" stroke="#a1887f" stroke-width="8" fill="none" />
+                <ellipse cx="505" cy="500" rx="20" ry="35" fill="#a1887f" />
+                <circle cx="510" cy="465" r="12" fill="#a1887f" />
+                <text x="475" y="555" font-size="14" font-weight="bold">Kangaroo</text>
+            </g>
+
+            <g class="animal" onclick="speak('Panda')">
+                <circle cx="280" cy="100" r="25" fill="#fff" stroke="#000" />
+                <circle cx="265" cy="85" r="8" fill="#000" />
+                <circle cx="295" cy="85" r="8" fill="#000" />
+                <circle cx="272" cy="98" r="5" fill="#000" />
+                <circle cx="288" cy="98" r="5" fill="#000" />
+                <text x="260" y="145" font-size="14" font-weight="bold">Panda</text>
+            </g>
+
+            <g class="animal" onclick="speak('Bear')">
+                <circle cx="400" cy="100" r="30" fill="#6d4c41" />
+                <circle cx="385" cy="80" r="10" fill="#6d4c41" />
+                <circle cx="415" cy="80" r="10" fill="#6d4c41" />
+                <text x="385" y="150" font-size="14" font-weight="bold">Bear</text>
+            </g>
+
+            <g class="animal" onclick="speak('Rabbit')">
+                <ellipse cx="650" cy="530" rx="15" ry="12" fill="#eeeeee" />
+                <ellipse cx="645" cy="510" rx="4" ry="12" fill="#eeeeee" />
+                <ellipse cx="655" cy="510" rx="4" ry="12" fill="#eeeeee" />
+                <text x="630" y="560" font-size="14" font-weight="bold">Rabbit</text>
+            </g>
+
+            <g class="animal" onclick="speak('Snake')">
+                <path d="M780 80 Q 810 50 840 80 T 880 80" stroke="#8bc34a" stroke-width="6" fill="none" />
+                <circle cx="780" cy="80" r="6" fill="#8bc34a" />
+                <text x="810" y="110" font-size="14" font-weight="bold">Snake</text>
+            </g>
+
+            <g class="animal" onclick="speak('Koala')">
+                <circle cx="180" cy="80" r="20" fill="#b0bec5" />
+                <circle cx="155" cy="70" r="10" fill="#b0bec5" />
+                <circle cx="205" cy="70" r="10" fill="#b0bec5" />
+                <rect x="175" y="75" width="10" height="12" rx="4" fill="#37474f" />
+                <text x="160" y="120" font-size="14" font-weight="bold">Koala</text>
+            </g>
+
+            <g class="animal" onclick="speak('Flamingo')">
+                <line x1="220" y1="520" x2="220" y2="490" stroke="#f06292" stroke-width="2" />
+                <ellipse cx="230" cy="490" rx="15" ry="10" fill="#f06292" />
+                <path d="M240 490 Q 250 460 235 460" stroke="#f06292" stroke-width="3" fill="none" />
+                <text x="210" y="530" font-size="14" font-weight="bold">Flamingo</text>
+            </g>
+
+            <g class="animal" onclick="speak('Gorilla')">
+                <rect x="580" y="470" width="50" height="50" rx="10" fill="#424242" />
+                <circle cx="605" cy="460" r="20" fill="#424242" />
+                <text x="585" y="540" font-size="14" font-weight="bold">Gorilla</text>
+            </g>
+
+            <g class="animal" onclick="speak('Camel')">
+                <path d="M820 250 Q 840 210 860 250 Q 880 210 900 250" stroke="#d4a373" stroke-width="15" fill="none" />
+                <rect x="830" y="250" width="50" height="30" rx="5" fill="#d4a373" />
+                <text x="835" y="300" font-size="14" font-weight="bold">Camel</text>
             </g>
         </svg>
     </div>
@@ -95,19 +190,14 @@
 
     <script>
         function speak(word) {
-            // 表示を更新
             document.getElementById('word-display').innerText = word;
 
-            // ブラウザの音声合成を確認
             if ('speechSynthesis' in window) {
-                // 前の音声をキャンセル
                 window.speechSynthesis.cancel();
-
                 const utterance = new SpeechSynthesisUtterance(word);
-                utterance.lang = 'en-US'; // 英語(アメリカ)に設定
-                utterance.rate = 0.9;     // 少しゆっくり
+                utterance.lang = 'en-US';
+                utterance.rate = 0.85; // 少しゆっくりめで聞き取りやすく
                 utterance.pitch = 1.0;
-                
                 window.speechSynthesis.speak(utterance);
             } else {
                 alert("申し訳ありません、お使いのブラウザは音声合成に対応していません。");
