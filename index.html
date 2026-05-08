@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Learning Hub</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #37474f;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            width: 280px;
+            padding: 30px;
+            text-align: center;
+            text-decoration: none;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 4px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        /* 動物園カードのスタイル */
+        .card.zoo { border-color: #8bc34a; }
+        .card.zoo h2 { color: #2e7d32; }
+        .card.zoo .icon { font-size: 50px; }
+
+        /* 教室カードのスタイル */
+        .card.classroom { border-color: #ffb74d; }
+        .card.classroom h2 { color: #e65100; }
+        .card.classroom .icon { font-size: 50px; }
+
+        .icon {
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        h2 {
+            margin: 10px 0;
+            font-size: 1.5rem;
+        }
+
+        p {
+            color: #78909c;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>English Learning Hub</h1>
+    
+    <div class="container">
+        <a href="en_zoo.html" class="card zoo">
+            <span class="icon">🦁</span>
+            <h2>Interactive Zoo</h2>
+            <p>動物をタップして、<br>英語の名前と発音を学ぼう！</p>
+        </a>
+
+        <a href="en_classroom.html" class="card classroom">
+            <span class="icon">🏫</span>
+            <h2>English Classroom</h2>
+            <p>教室にあるものを探して、<br>身近な英単語をマスターしよう！</p>
+        </a>
+    </div>
+
+</body>
+</html>
