@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Word Flashcards</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #e3f2fd;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 { color: #1565c0; margin-bottom: 5px; text-align: center; }
+        .subtitle { color: #555; margin-bottom: 15px; text-align: center; }
+
+        #progress {
+            color: #1976d2;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            border: 8px solid #42a5f5;
+            width: 100%;
+            max-width: 420px;
+            padding: 30px 20px 35px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        #word {
+            font-size: 48px;
+            font-weight: bold;
+            color: #0d47a1;
+            margin-bottom: 20px;
+            word-break: break-word;
+        }
+
+        /* 画像（絵文字）と日本語訳は「読み上げ」まで隠しておく */
+        #image {
+            font-size: 90px;
+            line-height: 1.1;
+            height: 110px;
+            visibility: hidden;
+        }
+
+        #translation {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ef6c00;
+            height: 40px;
+            margin-top: 10px;
+            visibility: hidden;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 26px;
+            cursor: pointer;
+            color: #fff;
+            transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.15);
+        }
+        button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+        button:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+        #speak-btn { background-color: #43a047; }
+        #next-btn  { background-color: #1e88e5; }
+
+        /* 終了画面 */
+        #finish { display: none; }
+        #finish .emoji { font-size: 80px; }
+        #finish h2 { color: #1565c0; font-size: 2rem; margin: 10px 0; }
+        #restart-btn { background-color: #8e24aa; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <h1>English Word Flashcards</h1>
+    <p class="subtitle">小中学校で習う英単語を10問で学ぼう！</p>
+
+    <div id="progress"></div>
+
+    <div class="card" id="quiz">
+        <div id="word"></div>
+        <div id="image"></div>
+        <div id="translation"></div>
+
+        <div class="buttons">
+            <button id="speak-btn" onclick="readAloud()">🔊 読み上げ</button>
+            <button id="next-btn" onclick="nextWord()">次へ ▶</button>
+        </div>
+    </div>
+
+    <div class="card" id="finish">
+        <div class="emoji">🎉</div>
+        <h2>Great job!</h2>
+        <p class="subtitle">10問すべて終わりました。おつかれさま！</p>
+        <button id="restart-btn" onclick="restart()">🔁 もう一度</button>
+    </div>
+
+    <script>
+        // 小中学校で習う英単語のプール（単語 / 絵文字画像 / 日本語訳）
+        const WORD_POOL = [
+            { word: 'apple',    image: '🍎', ja: 'りんご' },
+            { word: 'dog',      image: '🐶', ja: 'いぬ' },
+            { word: 'cat',      image: '🐱', ja: 'ねこ' },
+            { word: 'book',     image: '📖', ja: '本' },
+            { word: 'school',   image: '🏫', ja: '学校' },
+            { word: 'water',    image: '💧', ja: '水' },
+            { word: 'sun',      image: '☀️', ja: '太陽' },
+            { word: 'flower',   image: '🌸', ja: '花' },
+            { word: 'car',      image: '🚗', ja: '自動車' },
+            { word: 'star',     image: '⭐', ja: '星' },
+            { word: 'bird',     image: '🐦', ja: '鳥' },
+            { word: 'fish',     image: '🐟', ja: '魚' },
+            { word: 'house',    image: '🏠', ja: '家' },
+            { word: 'tree',     image: '🌳', ja: '木' },
+            { word: 'clock',    image: '🕐', ja: '時計' },
+            { word: 'umbrella', image: '☔', ja: 'かさ' },
+            { word: 'pencil',   image: '✏️', ja: 'えんぴつ' },
+            { word: 'train',    image: '🚆', ja: '電車' },
+            { word: 'moon',     image: '🌙', ja: '月' },
+            { word: 'egg',      image: '🥚', ja: 'たまご' }
+        ];
+
+        const TOTAL = 10; // 10回繰り返したら終了
+
+        let quizWords = [];
+        let index = 0;
+
+        // プールをシャッフルして10問を選ぶ
+        function pickWords() {
+            const shuffled = WORD_POOL.slice();
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled.slice(0, TOTAL);
+        }
+
+        // 現在の英単語を表示（画像と日本語訳は隠す）
+        function showWord() {
+            const current = quizWords[index];
+            document.getElementById('word').innerText = current.word;
+            document.getElementById('image').innerText = current.image;
+            document.getElementById('translation').innerText = current.ja;
+
+            // 画像と日本語訳をクリア（非表示）
+            document.getElementById('image').style.visibility = 'hidden';
+            document.getElementById('translation').style.visibility = 'hidden';
+
+            document.getElementById('progress').innerText = (index + 1) + ' / ' + TOTAL;
+        }
+
+        // 「読み上げ」：ネイティブ音声で読み上げ、画像と日本語訳を表示
+        function readAloud() {
+            const current = quizWords[index];
+
+            // 画像と日本語訳を表示
+            document.getElementById('image').style.visibility = 'visible';
+            document.getElementById('translation').style.visibility = 'visible';
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(current.word);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.85; // 少しゆっくりめで聞き取りやすく
+                utterance.pitch = 1.0;
+
+                // 可能であればネイティブ（英語）の音声を選ぶ
+                const enVoice = window.speechSynthesis.getVoices()
+                    .find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+                if (enVoice) utterance.voice = enVoice;
+
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('申し訳ありません、お使いのブラウザは音声合成に対応していません。');
+            }
+        }
+
+        // 「次へ」：画像と日本語訳をクリアして次の英単語へ。10問終わったら終了
+        function nextWord() {
+            index++;
+            if (index >= TOTAL) {
+                finish();
+                return;
+            }
+            showWord();
+        }
+
+        function finish() {
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            document.getElementById('quiz').style.display = 'none';
+            document.getElementById('progress').style.display = 'none';
+            document.getElementById('finish').style.display = 'block';
+        }
+
+        function restart() {
+            quizWords = pickWords();
+            index = 0;
+            document.getElementById('finish').style.display = 'none';
+            document.getElementById('quiz').style.display = 'block';
+            document.getElementById('progress').style.display = 'block';
+            showWord();
+        }
+
+        // 一部のブラウザでは音声リストが非同期に読み込まれる
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
+
+        // 初期化
+        quizWords = pickWords();
+        showWord();
+    </script>
+</body>
+</html>
