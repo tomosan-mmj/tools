@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>たのしい！とけいの学習教材</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+    body {
+      background-color: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      margin: 0;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 500px;
+      width: 100%;
+    }
+    .mode-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      width: 100%;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #4a90e2;
+      background: white;
+      color: #4a90e2;
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+    .mode-btn.active {
+      background: #4a90e2;
+      color: white;
+    }
+    .clock-wrapper {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 10px 0;
+      touch-action: none;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    .hand {
+      cursor: grab;
+      stroke-linecap: round;
+    }
+    .hand:active {
+      cursor: grabbing;
+    }
+    .hand-hour {
+      stroke: #e74c3c;
+      stroke-width: 9;
+    }
+    .hand-minute {
+      stroke: #3498db;
+      stroke-width: 6;
+    }
+    .center-dot {
+      fill: #333;
+    }
+    .display-panel {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 10px 0;
+      height: 45px;
+      display: flex;
+      align-items: center;
+    }
+    .quiz-card {
+      background: #fff3cd;
+      border: 2px solid #ffeba2;
+      border-radius: 10px;
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      width: 100%;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #856404;
+    }
+    .quiz-progress {
+      font-size: 14px;
+      color: #d97706;
+      margin-bottom: 4px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      background: #e2e8f0;
+      color: #334155;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn:hover {
+      background: #cbd5e1;
+    }
+    .btn-primary {
+      background: #22c55e;
+      color: white;
+      font-size: 16px;
+      padding: 10px 20px;
+    }
+    .btn-primary:hover {
+      background: #16a34a;
+    }
+    .feedback {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 5px;
+      min-height: 30px;
+      text-align: center;
+    }
+    .correct { color: #22c55e; }
+    .incorrect { color: #ef4444; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <h1>⏰ たのしい！とけいの学習</h1>
+
+  <div class="container">
+    <div class="mode-selector">
+      <button class="mode-btn active" id="btn-practice" onclick="setMode('practice')">自由にうごかす</button>
+      <button class="mode-btn" id="btn-quiz" onclick="setMode('quiz')">クイズ（全3問）</button>
+    </div>
+
+    <div id="quiz-panel" class="quiz-card hidden">
+      <div id="quiz-progress" class="quiz-progress">だい 1 もん / ぜん 3 もん</div>
+      <span id="quiz-question">3時00分 に合わせてみよう！</span>
+    </div>
+
+    <div class="clock-wrapper">
+      <svg id="clock" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="95" fill="#ffffff" stroke="#333333" stroke-width="4"/>
+        
+        <g id="ticks"></g>
+        <g id="numbers"></g>
+
+        <!-- 短針（赤・時） -->
+        <line id="hour-hand" class="hand hand-hour" x1="100" y1="100" x2="100" y2="48" />
+        
+        <!-- 長針（青・分） -->
+        <line id="minute-hand" class="hand hand-minute" x1="100" y1="100" x2="100" y2="25" />
+        
+        <circle class="center-dot" cx="100" cy="100" r="6"/>
+      </svg>
+    </div>
+
+    <div class="display-panel" id="digital-display">
+      10 時 10 分
+    </div>
+
+    <div class="feedback" id="feedback-msg"></div>
+
+    <div id="practice-controls" class="controls">
+      <button class="btn" onclick="addMinutes(-60)">-1時間</button>
+      <button class="btn" onclick="addMinutes(-5)">-5分</button>
+      <button class="btn" onclick="addMinutes(5)">+5分</button>
+      <button class="btn" onclick="addMinutes(60)">+1時間</button>
+    </div>
+
+    <div id="quiz-controls" class="controls hidden">
+      <button class="btn btn-primary" id="btn-check" onclick="checkAnswer()">こたえあわせ</button>
+      <button class="btn hidden" id="btn-next" onclick="nextQuestion()">つぎの問題へ</button>
+      <button class="btn btn-primary hidden" id="btn-retry" onclick="startQuiz()">もう一度挑戦する</button>
+    </div>
+  </div>
+
+  <script>
+    // 練習モード用：一元管理する合計分 (0 〜 719分)
+    let totalMinutes = 10 * 60 + 10; // 初期位置 10:10
+
+    // クイズモード用：独立管理する角度
+    let quizHourDeg = 300;
+    let quizMinuteDeg = 60;
+
+    let currentMode = 'practice';
+    let targetHour = 0;
+    let targetMinute = 0;
+
+    let quizQuestionCount = 0;
+    let score = 0;
+    let isAnswered = false;
+
+    const clock = document.getElementById('clock');
+    const hourHand = document.getElementById('hour-hand');
+    const minuteHand = document.getElementById('minute-hand');
+    const digitalDisplay = document.getElementById('digital-display');
+    const feedbackMsg = document.getElementById('feedback-msg');
+
+    function initClockFace() {
+      const ticksGroup = document.getElementById('ticks');
+      const numbersGroup = document.getElementById('numbers');
+
+      for (let i = 0; i < 60; i++) {
+        const angle = (i * 6) * Math.PI / 180;
+        const isHour = i % 5 === 0;
+        const r1 = 90;
+        const r2 = isHour ? 80 : 86;
+
+        const x1 = 100 + r1 * Math.sin(angle);
+        const y1 = 100 - r1 * Math.cos(angle);
+        const x2 = 100 + r2 * Math.sin(angle);
+        const y2 = 100 - r2 * Math.cos(angle);
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', isHour ? '#333' : '#aaa');
+        line.setAttribute('stroke-width', isHour ? '3' : '1');
+        ticksGroup.appendChild(line);
+
+        if (isHour) {
+          const hourNum = i === 0 ? 12 : i / 5;
+          const textR = 70;
+          const tx = 100 + textR * Math.sin(angle);
+          const ty = 100 - textR * Math.cos(angle) + 6;
+
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', tx);
+          text.setAttribute('y', ty);
+          text.setAttribute('text-anchor', 'middle');
+          text.setAttribute('font-size', '18');
+          text.setAttribute('font-weight', 'bold');
+          text.setAttribute('fill', '#2c3e50');
+          text.textContent = hourNum;
+          numbersGroup.appendChild(text);
+        }
+      }
+    }
+
+    function updateClock() {
+      let hDeg, mDeg, displayHour, formattedMin;
+
+      if (currentMode === 'practice') {
+        // 0〜719分の範囲に正規化 (12時間周期)
+        totalMinutes = (totalMinutes % 720 + 720) % 720;
+
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = Math.round(totalMinutes % 60);
+
+        // 完全連動角度計算
+        mDeg = (totalMinutes % 60) * 6;  // 1分 = 6度
+        hDeg = (totalMinutes / 720) * 360; // 12時間 = 360度 (短針の角度)
+
+        displayHour = hours === 0 ? 12 : hours;
+        formattedMin = (minutes % 60) < 10 ? '0' + (minutes % 60) : (minutes % 60);
+      } else {
+        // クイズモード（独立動作）
+        quizHourDeg = (quizHourDeg % 360 + 360) % 360;
+        quizMinuteDeg = (quizMinuteDeg % 360 + 360) % 360;
+
+        hDeg = quizHourDeg;
+        mDeg = quizMinuteDeg;
+
+        let currentHour = Math.floor(quizHourDeg / 30);
+        displayHour = currentHour === 0 ? 12 : currentHour;
+        const currentMinute = Math.round(quizMinuteDeg / 6) % 60;
+        formattedMin = currentMinute < 10 ? '0' + currentMinute : currentMinute;
+      }
+
+      hourHand.setAttribute('transform', `rotate(${hDeg} 100 100)`);
+      minuteHand.setAttribute('transform', `rotate(${mDeg} 100 100)`);
+
+      if (currentMode === 'practice' || isAnswered) {
+        digitalDisplay.textContent = `${displayHour} 時 ${formattedMin} 分`;
+      } else {
+        digitalDisplay.textContent = `? 時 ? 分`;
+      }
+    }
+
+    function addMinutes(mins) {
+      if (currentMode === 'quiz' && isAnswered) return;
+
+      if (currentMode === 'practice') {
+        totalMinutes += mins;
+      } else {
+        quizMinuteDeg += mins * 6;
+        quizHourDeg += mins * 0.5;
+      }
+
+      feedbackMsg.textContent = '';
+      updateClock();
+    }
+
+    let activeHand = null;
+
+    function getMousePosition(e) {
+      const rect = clock.getBoundingClientRect();
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      const dx = clientX - (rect.left + rect.width / 2);
+      const dy = clientY - (rect.top + rect.height / 2);
+      
+      let rad = Math.atan2(dx, -dy);
+      let deg = rad * (180 / Math.PI);
+      if (deg < 0) deg += 360;
+
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      return { deg, dist, radius: rect.width / 2 };
+    }
+
+function handlePointerDown(e) {
+  if (currentMode === 'quiz' && isAnswered) return;
+  e.preventDefault();
+
+  const { deg, dist, radius } = getMousePosition(e);
+  
+  // 中心からの距離の割合（0%〜100%）
+  const normalizedDist = (dist / radius) * 100;
+
+  // 現在の短針と長針の角度を取得
+  let hDeg, mDeg;
+  if (currentMode === 'practice') {
+    mDeg = (totalMinutes % 60) * 6;
+    hDeg = (totalMinutes / 720) * 360;
+  } else {
+    hDeg = quizHourDeg;
+    mDeg = quizMinuteDeg;
+  }
+
+  // タッチ位置と各針との角度差（0〜180度）を算出
+  const getAngleDiff = (a, b) => {
+    let diff = Math.abs((a % 360) - (b % 360));
+    return diff > 180 ? 360 - diff : diff;
+  };
+
+  const diffHour = getAngleDiff(deg, hDeg);
+  const diffMinute = getAngleDiff(deg, mDeg);
+
+  // 短針の長さを考慮した境界（短針のy2=48から計算すると中心から長さ約52%）
+  const hourHandLengthRatio = 52;
+
+  // 条件判断
+  // 1. 短針の長さより外側かつ長針に近い場合 -> 長針を操作
+  // 2. 短針の長さより内側かつ短針に近い場合 -> 短針を操作
+  if (normalizedDist >= hourHandLengthRatio) {
+    if (diffMinute <= diffHour) {
+      activeHand = 'minute';
+    } else {
+      activeHand = 'hour'; // 外側でも短針に近い場合の予備判定
+    }
+  } else {
+    if (diffHour <= diffMinute) {
+      activeHand = 'hour';
+    } else {
+      activeHand = 'minute'; // 内側でも長針に近い場合の予備判定
+    }
+  }
+
+  handlePointerMove(e);
+}
+
+    function handlePointerMove(e) {
+      if (!activeHand || (currentMode === 'quiz' && isAnswered)) return;
+      e.preventDefault();
+
+      const { deg } = getMousePosition(e);
+
+      if (currentMode === 'practice') {
+        if (activeHand === 'minute') {
+          // 長針ドラッグ：分を更新し、12時またぎを反映
+          const newMinute = Math.round(deg / 6) % 60;
+          const currentMinute = totalMinutes % 60;
+
+          let diff = newMinute - currentMinute;
+          if (diff < -30) diff += 60;
+          if (diff > 30) diff -= 60;
+
+          totalMinutes += diff;
+        } else if (activeHand === 'hour') {
+          // 短針ドラッグ：短針の連続的な角度から正確な合計分を算出し、長針も完全連動
+          const currentHourDeg = (totalMinutes / 720) * 360; // 0〜360度
+          let diffDeg = deg - (currentHourDeg % 360);
+
+          if (diffDeg < -180) diffDeg += 360;
+          if (diffDeg > 180) diffDeg -= 360;
+
+          // 短針1度 = 2分
+          totalMinutes += diffDeg * 2;
+        }
+      } else {
+        // クイズモード（独立操作）
+        if (activeHand === 'minute') {
+          quizMinuteDeg = Math.round(deg / 6) * 6;
+        } else if (activeHand === 'hour') {
+          quizHourDeg = deg;
+        }
+      }
+
+      feedbackMsg.textContent = '';
+      updateClock();
+    }
+
+    function handlePointerUp() {
+      activeHand = null;
+    }
+
+    clock.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointermove', handlePointerMove, { passive: false });
+    window.addEventListener('pointerup', handlePointerUp);
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('btn-practice').classList.toggle('active', mode === 'practice');
+      document.getElementById('btn-quiz').classList.toggle('active', mode === 'quiz');
+
+      document.getElementById('practice-controls').classList.toggle('hidden', mode !== 'practice');
+      document.getElementById('quiz-controls').classList.toggle('hidden', mode !== 'quiz');
+      document.getElementById('quiz-panel').classList.toggle('hidden', mode !== 'quiz');
+
+      feedbackMsg.textContent = '';
+
+      if (mode === 'quiz') {
+        startQuiz();
+      } else {
+        isAnswered = false;
+        updateClock();
+      }
+    }
+
+    function startQuiz() {
+      quizQuestionCount = 0;
+      score = 0;
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+      if (quizQuestionCount >= 3) {
+        showFinalResult();
+        return;
+      }
+
+      quizQuestionCount++;
+      isAnswered = false;
+
+      document.getElementById('quiz-progress').textContent = `だい ${quizQuestionCount} もん / ぜん 3 もん`;
+      document.getElementById('btn-check').classList.remove('hidden');
+      document.getElementById('btn-next').classList.add('hidden');
+      document.getElementById('btn-retry').classList.add('hidden');
+
+      targetHour = Math.floor(Math.random() * 12) + 1;
+      targetMinute = Math.floor(Math.random() * 12) * 5;
+
+      const formattedMin = targetMinute < 10 ? '0' + targetMinute : targetMinute;
+      document.getElementById('quiz-question').textContent = `${targetHour}時${formattedMin}分 に合わせてみよう！`;
+
+      quizHourDeg = (targetHour * 30 + 90) % 360;
+      quizMinuteDeg = (targetMinute * 6 + 180) % 360;
+
+      feedbackMsg.textContent = '';
+      updateClock();
+    }
+
+    function checkAnswer() {
+      if (isAnswered) return;
+      isAnswered = true;
+
+      const estimatedMinutesFromHourHand = quizHourDeg * 2;
+      const targetHourNormalized = targetHour === 12 ? 0 : targetHour;
+      const targetTotalMinutes = targetHourNormalized * 60 + targetMinute;
+
+      let diffMinutes = Math.abs(estimatedMinutesFromHourHand - targetTotalMinutes);
+      if (diffMinutes > 360) {
+        diffMinutes = 720 - diffMinutes;
+      }
+
+      const currentMinuteHand = Math.round(quizMinuteDeg / 6) % 60;
+      let minDiff = Math.abs(currentMinuteHand - targetMinute);
+      if (minDiff > 30) minDiff = 60 - minDiff;
+
+      if (diffMinutes <= 10 && minDiff <= 3) {
+        score++;
+        feedbackMsg.textContent = '⭕ せいかい！ 短針の位置もぴったりだね！';
+        feedbackMsg.className = 'feedback correct';
+      } else {
+        const formattedMin = targetMinute < 10 ? '0' + targetMinute : targetMinute;
+        feedbackMsg.textContent = `❌ おしい！ 短針の位置が離れています（正解: ${targetHour}時${formattedMin}分）`;
+        feedbackMsg.className = 'feedback incorrect';
+      }
+
+      updateClock();
+
+      document.getElementById('btn-check').classList.add('hidden');
+      if (quizQuestionCount < 3) {
+        document.getElementById('btn-next').classList.remove('hidden');
+      } else {
+        setTimeout(showFinalResult, 1500);
+      }
+    }
+
+    function showFinalResult() {
+      document.getElementById('quiz-progress').textContent = 'ぜんぶ 終了！';
+      document.getElementById('quiz-question').textContent = `おつかれさま！ 3もんちゅう ${score}もん せいかい！`;
+
+      if (score === 3) {
+        feedbackMsg.textContent = '🎉 パーフェクト！ 短針の位置もバッチリ！';
+        feedbackMsg.className = 'feedback correct';
+      } else {
+        feedbackMsg.textContent = '👍 よくがんばったね！';
+        feedbackMsg.className = 'feedback correct';
+      }
+
+      document.getElementById('btn-check').classList.add('hidden');
+      document.getElementById('btn-next').classList.add('hidden');
+      document.getElementById('btn-retry').classList.remove('hidden');
+    }
+
+    initClockFace();
+    updateClock();
+  </script>
+</body>
+</html>
