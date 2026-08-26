@@ -166,7 +166,7 @@
 
     // 保存されたAPIキーがあれば読み込む
     apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
-    apiKeyInput.value = 'AIzaSyBAcr25HW_kTsRs2mP6cLWtacGRYzhNWLI';
+    apiKeyInput.value = 'AIzaSyDkKsuEqgMN2iHwJTi0ebtszw-CKuOLEY8';
     apiKeyInput.addEventListener('change', () => {
       localStorage.setItem('gemini_api_key', apiKeyInput.value.trim());
     });
@@ -263,7 +263,7 @@
 
     // Gemini API 呼び出し
     async function analyzeImageWithGemini(base64Image, mimeType, apiKey) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
 
       const prompt = `この画像を分析し、以下のJSON形式でのみレスポンスを返してください。
 - 料理や食品が写っている場合:
