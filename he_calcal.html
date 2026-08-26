@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>画像解析・料理＆カロリー判定</title>
+  <style>
+    :root {
+      --primary-color: #4f46e5;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-color: #1e293b;
+      --border-color: #e2e8f0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--primary-color);
+    }
+
+    .api-key-container {
+      background: var(--card-bg);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .api-key-container input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+
+    #drop-zone {
+      border: 2px dashed var(--primary-color);
+      background-color: #eff6ff;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 30px;
+    }
+
+    #drop-zone.dragover {
+      background-color: #dbeafe;
+      transform: scale(1.01);
+    }
+
+    #drop-zone p {
+      margin: 0;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    #results-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .result-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      border: 1px solid var(--border-color);
+    }
+
+    .result-card img {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .result-info {
+      flex: 1;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .badge-food {
+      background-color: #fef3c7;
+      color: #d97706;
+    }
+
+    .badge-other {
+      background-color: #e0e7ff;
+      color: #4338ca;
+    }
+
+    .item-name {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin: 0 0 6px 0;
+    }
+
+    .item-detail {
+      font-size: 0.95rem;
+      color: #475569;
+      margin: 0 0 6px 0;
+    }
+
+    .calorie-reason {
+      font-size: 0.85rem;
+      color: #64748b;
+      background-color: #f1f5f9;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    .loading {
+      color: #94a3b8;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>画像解析 AI チェッカー</h1>
+
+  <div class="api-key-container">
+    <label for="api-key">Gemini API Key:</label>
+    <input type="password" id="api-key" placeholder="API Key を入力してください。">
+  </div>
+
+  <div id="drop-zone">
+    <p>ここに画像をドラッグ＆ドロップ<br>（複数・連続ドロップ対応）</p>
+    <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
+  </div>
+
+  <div id="results-container"></div>
+
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const resultsContainer = document.getElementById('results-container');
+    const apiKeyInput = document.getElementById('api-key');
+
+    // 保存されたAPIキーがあれば読み込む
+    apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
+    apiKeyInput.value = 'AIzaSyBAcr25HW_kTsRs2mP6cLWtacGRYzhNWLI';
+    apiKeyInput.addEventListener('change', () => {
+      localStorage.setItem('gemini_api_key', apiKeyInput.value.trim());
+    });
+
+    // イベントリスナー設定
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      handleFiles(dt.files);
+    });
+
+    // 複数ファイルの処理
+    function handleFiles(files) {
+      const apiKey = apiKeyInput.value.trim();
+      if (!apiKey) {
+        alert('APIキーを入力してください。');
+        return;
+      }
+      Array.from(files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+          processImage(file, apiKey);
+        }
+      });
+    }
+
+    // 画像処理およびAPI呼び出し
+    async function processImage(file, apiKey) {
+      // カードUIの作成
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'result-info';
+      infoDiv.innerHTML = `<p class="loading">解析中...</p>`;
+      
+      card.appendChild(img);
+      card.appendChild(infoDiv);
+      
+      // 新しい結果を上に追加
+      resultsContainer.insertBefore(card, resultsContainer.firstChild);
+
+      try {
+        const base64Data = await fileToBase64(file);
+        const analysis = await analyzeImageWithGemini(base64Data, file.type, apiKey);
+
+        if (analysis.is_food) {
+          infoDiv.innerHTML = `
+            <span class="badge badge-food">料理</span>
+            <h2 class="item-name">${escapeHtml(analysis.name)}</h2>
+            <p class="item-detail"><strong>推定カロリー:</strong> ${escapeHtml(analysis.calories)}</p>
+            <div class="calorie-reason">
+              <strong>計算根拠:</strong><br>${escapeHtml(analysis.calorie_reasoning || '詳細情報なし')}
+            </div>
+          `;
+        } else {
+          infoDiv.innerHTML = `
+            <span class="badge badge-other">物体/その他</span>
+            <h2 class="item-name">${escapeHtml(analysis.name)}</h2>
+          `;
+        }
+      } catch (error) {
+        infoDiv.innerHTML = `<p style="color: #ef4444;">エラー: ${escapeHtml(error.message)}</p>`;
+      }
+    }
+
+    // 画像をBase64に変換
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Gemini API 呼び出し
+    async function analyzeImageWithGemini(base64Image, mimeType, apiKey) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      const prompt = `この画像を分析し、以下のJSON形式でのみレスポンスを返してください。
+- 料理や食品が写っている場合:
+  {"is_food": true, "name": "料理名", "calories": "推定カロリー（例: 約500kcal）", "calorie_reasoning": "カロリー計算の根拠（食材の内訳、量、調理法などの推定理由）"}
+- 料理以外が写っている場合:
+  {"is_food": false, "name": "写っているものの名前", "calories": null, "calorie_reasoning": null}
+
+※マークダウンのコードブロック(\`\`\`json ...)は含めず、純粋なJSON文字列のみを出力してください。`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: mimeType,
+                  data: base64Image
+                }
+              }
+            ]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`APIエラー: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates[0].content.parts[0].text.trim();
+      
+      // JSON文字列の整形（余計な文字が含まれている場合の対策）
+      const cleanJson = rawText.replace(/```json|```/g, '').trim();
+      return JSON.parse(cleanJson);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>"']/g, match => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[match]));
+    }
+  </script>
+</body>
+</html>
