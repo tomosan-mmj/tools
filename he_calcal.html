@@ -165,8 +165,8 @@
     const apiKeyInput = document.getElementById('api-key');
 
     // 保存されたAPIキーがあれば読み込む
+    localStorage.setItem('gemini_api_key','AIzaSyDkKsuEqgMN2iHwJTi0ebtszw-CKuOLEY8');
     apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
-    apiKeyInput.value = 'AIzaSyDkKsuEqgMN2iHwJTi0ebtszw-CKuOLEY8';
     apiKeyInput.addEventListener('change', () => {
       localStorage.setItem('gemini_api_key', apiKeyInput.value.trim());
     });
