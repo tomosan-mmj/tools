@@ -72,22 +72,9 @@
       padding: 10px;
       border-radius: 8px;
       border: 1px solid #e9ecef;
-    }
-    .canvas-container {
-      height: 50px;
-      margin-top: 6px;
-      margin-bottom: 0;
-      background: #2c3e50;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .canvas-container.has-bottom-btn {
-      margin-bottom: 8px;
-    }
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     button {
       width: 100%;
@@ -163,26 +150,17 @@
       <!-- ネイティブ発音ブロック -->
       <div class="audio-block">
         <button class="btn-native" id="playNativeBtn">🔊 ネイティブの発音を聴く</button>
-        <div class="canvas-container">
-          <canvas id="nativeCanvas"></canvas>
-        </div>
       </div>
 
       <!-- 録音・自分の発音ブロック -->
       <div class="audio-block">
         <button class="btn-rec" id="recordBtn">🎙️ 録音を開始する</button>
-        <div class="canvas-container has-bottom-btn">
-          <canvas id="userCanvas"></canvas>
-        </div>
         <button class="btn-user" id="playUserBtn" disabled>🔊 自分の発音を聴く</button>
       </div>
 
       <!-- 同時再生ブロック -->
       <div class="audio-block">
         <button class="btn-both" id="playBothBtn" disabled>🎧 両方の発音を同時に聴く</button>
-        <div class="canvas-container">
-          <canvas id="bothCanvas"></canvas>
-        </div>
       </div>
 
       <button class="btn-next" id="nextWordBtn">次へ ➔</button>
@@ -583,7 +561,6 @@
   let mediaRecorder = null;
   let audioChunks = [];
   
-  let nativeAudioBuffer = null;
   let userAudioBuffer = null;
 
   const quizArea = document.getElementById('quizArea');
@@ -599,10 +576,6 @@
   const nextWordBtn = document.getElementById('nextWordBtn');
   const restartBtn = document.getElementById('restartBtn');
 
-  const nativeCanvas = document.getElementById('nativeCanvas');
-  const userCanvas = document.getElementById('userCanvas');
-  const bothCanvas = document.getElementById('bothCanvas');
-
   function getAudioContext() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -613,30 +586,18 @@
     return audioCtx;
   }
 
-  // 音節数の算出関数
-  function countSyllables(word) {
-    word = word.toLowerCase().trim();
-    if (word.length <= 3) return 1;
-    word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
-    word = word.replace(/^y/, '');
-    const matches = word.match(/[aeiouy]{1,2}/g);
-    return matches ? Math.max(1, matches.length) : 1;
-  }
-
   // 小さな雑音・環境ノイズもトリミングする強めのトリミング処理
   function trimAudioBuffer(buffer) {
     const ctx = getAudioContext();
     const data = buffer.getChannelData(0);
     const sampleRate = buffer.sampleRate;
     
-    // 雑音を検知・除外するための高めの閾値（振幅ベースおよび実効値RMSベース）
     const thresholdPeak = 0.04; 
-    const windowSize = Math.floor(sampleRate * 0.01); // 10ms単位で音量を判定
+    const windowSize = Math.floor(sampleRate * 0.01); 
     
     let startFrame = 0;
     let endFrame = data.length - 1;
 
-    // 前方の小さな雑音・息音をスキップ（喋り出し部分を探す）
     for (let i = 0; i < data.length - windowSize; i += windowSize) {
       let sum = 0;
       for (let j = 0; j < windowSize; j++) {
@@ -644,14 +605,12 @@
       }
       const rms = Math.sqrt(sum / windowSize);
       
-      // 10ms間の平均音量（RMS）または最大振幅が閾値を超えたら「声」と判定
       if (rms > thresholdPeak || Math.abs(data[i]) > thresholdPeak * 1.5) {
         startFrame = i;
         break;
       }
     }
 
-    // 後方の雑音をスキップ（喋り終わり部分を探す）
     for (let i = data.length - windowSize; i > startFrame; i -= windowSize) {
       let sum = 0;
       for (let j = 0; j < windowSize; j++) {
@@ -665,7 +624,6 @@
       }
     }
 
-    // 音の語頭・語尾が不自然に切れないようマージン（0.03秒）を残す
     const padding = Math.floor(sampleRate * 0.03);
     startFrame = Math.max(0, startFrame - padding);
     endFrame = Math.min(data.length - 1, endFrame + padding);
@@ -713,124 +671,6 @@
     } else {
       nextWordBtn.textContent = '次へ ➔';
     }
-    
-    clearCanvas(nativeCanvas);
-    clearCanvas(userCanvas);
-    clearCanvas(bothCanvas);
-
-    renderNativeWaveform(item.en);
-  }
-
-  // ネイティブ音声波形描画処理
-  function renderNativeWaveform(text) {
-    const ctx = getAudioContext();
-    const sampleRate = ctx.sampleRate;
-    
-    const syllableCount = countSyllables(text);
-    const duration = Math.max(0.4, syllableCount * 0.28 + (text.length > 6 ? 0.15 : 0));
-    const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < data.length; i++) {
-      const t = i / sampleRate;
-      const progress = t / duration;
-
-      const globalEnvelope = Math.sin(progress * Math.PI);
-      const syllableProgress = (progress * syllableCount) % 1;
-      const currentSyllableIndex = Math.floor(progress * syllableCount);
-      
-      const accent = (currentSyllableIndex === 0) ? 1.0 : 0.75;
-      const syllableEnvelope = Math.sin(syllableProgress * Math.PI) * accent;
-
-      const f0 = 150;
-      const fundamental = Math.sin(2 * Math.PI * f0 * t);
-      const h1 = 0.5 * Math.sin(2 * Math.PI * (f0 * 2) * t);
-      const h2 = 0.3 * Math.sin(2 * Math.PI * (f0 * 3.2) * t);
-      const noise = (Math.random() - 0.5) * 0.08;
-
-      data[i] = (fundamental + h1 + h2 + noise) * globalEnvelope * syllableEnvelope * 0.6;
-    }
-
-    nativeAudioBuffer = trimAudioBuffer(buffer);
-    drawWaveform(nativeCanvas, nativeAudioBuffer, '#3498db');
-  }
-
-  // 単一波形の描画
-  function drawWaveform(canvas, audioBuffer, color = '#2ecc71') {
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width = canvas.parentElement.clientWidth || 400;
-    const height = canvas.height = canvas.parentElement.clientHeight || 50;
-    
-    ctx.clearRect(0, 0, width, height);
-    if (!audioBuffer) return;
-
-    const data = audioBuffer.getChannelData(0);
-    const step = Math.ceil(data.length / width);
-    const amp = height / 2;
-
-    ctx.fillStyle = color;
-
-    for (let i = 0; i < width; i++) {
-      let min = 1.0;
-      let max = -1.0;
-      for (let j = 0; j < step; j++) {
-        const datum = data[(i * step) + j];
-        if (datum !== undefined) {
-          if (datum < min) min = datum;
-          if (datum > max) max = datum;
-        }
-      }
-      if (min <= max) {
-        const barHeight = Math.max(2, (max - min) * amp);
-        const y = (1 + min) * amp;
-        ctx.fillRect(i, y, 1.5, barHeight);
-      }
-    }
-  }
-
-  // 重ね合わせ波形の描画
-  function drawBothWaveform() {
-    const ctx = bothCanvas.getContext('2d');
-    const width = bothCanvas.width = bothCanvas.parentElement.clientWidth || 400;
-    const height = bothCanvas.height = bothCanvas.parentElement.clientHeight || 50;
-
-    ctx.clearRect(0, 0, width, height);
-
-    if (nativeAudioBuffer) {
-      drawWaveformToContext(ctx, width, height, nativeAudioBuffer, 'rgba(52, 152, 219, 0.75)');
-    }
-
-    if (userAudioBuffer) {
-      drawWaveformToContext(ctx, width, height, userAudioBuffer, 'rgba(46, 204, 113, 0.75)');
-    }
-  }
-
-  function drawWaveformToContext(ctx, width, height, audioBuffer, color) {
-    const data = audioBuffer.getChannelData(0);
-    const step = Math.ceil(data.length / width);
-    const amp = height / 2;
-
-    ctx.fillStyle = color;
-    for (let i = 0; i < width; i++) {
-      let min = 1.0, max = -1.0;
-      for (let j = 0; j < step; j++) {
-        const datum = data[(i * step) + j];
-        if (datum !== undefined) {
-          if (datum < min) min = datum;
-          if (datum > max) max = datum;
-        }
-      }
-      if (min <= max) {
-        const barHeight = Math.max(2, (max - min) * amp);
-        const y = (1 + min) * amp;
-        ctx.fillRect(i, y, 1.5, barHeight);
-      }
-    }
-  }
-
-  function clearCanvas(canvas) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
   // 1. ネイティブ再生
@@ -842,7 +682,7 @@
     window.speechSynthesis.speak(utterance);
   });
 
-  // 2. 録音処理（ノイズカット・雑音トリミングを実行）
+  // 2. 録音処理
   recordBtn.addEventListener('click', async () => {
     const ctx = getAudioContext();
 
@@ -866,12 +706,7 @@
         const arrayBuffer = await rawBlob.arrayBuffer();
         const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
 
-        // ★雑音・ノイズを除外する強化版トリミング処理を適用
         userAudioBuffer = trimAudioBuffer(decodedBuffer);
-
-        // 波形描画
-        drawWaveform(userCanvas, userAudioBuffer, '#2ecc71');
-        drawBothWaveform();
 
         playUserBtn.disabled = false;
         playBothBtn.disabled = false;
