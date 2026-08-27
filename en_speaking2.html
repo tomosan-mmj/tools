@@ -225,6 +225,9 @@
   let nativeAudioBuffer = null;
   let userAudioBuffer = null;
 
+  // 高音質音声（Mac/Chrome用）を保持する変数
+  let preferredVoice = null;
+
   const quizArea = document.getElementById('quizArea');
   const finishArea = document.getElementById('finishArea');
   const wordDisplay = document.getElementById('wordDisplay');
@@ -249,6 +252,61 @@
       audioCtx.resume();
     }
     return audioCtx;
+  }
+
+  // ★Mac/Chromeで高音質な英語音声を選択する関数
+  function loadBestVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return;
+
+    // 優先順位の高い自然な高品質音声リスト
+    const preferredVoiceNames = [
+      'Samantha',
+      'Google US English',
+      'Karen',
+      'Victoria',
+      'Fiona',
+      'Daniel',
+      'Alex'
+    ];
+
+    for (let name of preferredVoiceNames) {
+      const found = voices.find(v => v.name.includes(name) && v.lang.startsWith('en'));
+      if (found) {
+        preferredVoice = found;
+        break;
+      }
+    }
+
+    // 見つからない場合は標準の英語音声を取得
+    if (!preferredVoice) {
+      preferredVoice = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en'));
+    }
+  }
+
+  // 音声リスト読み込みイベント（Chrome対策）
+  if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = loadBestVoice;
+    loadBestVoice();
+  }
+
+  // Utteranceオブジェクトへ高品質音声とパラメータを割り当てるヘルパー
+  function createConfiguredUtterance(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+
+    if (!preferredVoice) {
+      loadBestVoice();
+    }
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    // 自然なクリア音声にするためのパラメータ調整
+    utterance.rate = 0.95; // 速度（少しだけゆっくりにして聞き取りやすく）
+    utterance.pitch = 1.0; // ピッチ
+    return utterance;
   }
 
   // 雑音トリミング処理
@@ -319,7 +377,6 @@
       return;
     }
 
-    // 進行中の読み上げがあれば停止
     window.speechSynthesis.cancel();
 
     const sentence = currentSentences[currentWordIndex];
@@ -337,20 +394,18 @@
       nextWordBtn.textContent = '次へ ➔';
     }
     
-    // キャンバスをクリア
     clearCanvas(nativeCanvas);
     clearCanvas(userCanvas);
     clearCanvas(bothCanvas);
   }
 
-  // ネイティブ音声を再生し、実際のPCMデータから波形を描画
+  // ネイティブ音声を高音質で再生し波形を描画
   function playAndRenderNative(text) {
     return new Promise((resolve) => {
       window.speechSynthesis.cancel();
       const ctx = getAudioContext();
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
+      const utterance = createConfiguredUtterance(text);
 
       const pcmData = [];
       let isCapturing = false;
@@ -545,8 +600,7 @@
 
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(currentSentences[currentWordIndex]);
-    utterance.lang = 'en-US';
+    const utterance = createConfiguredUtterance(currentSentences[currentWordIndex]);
 
     utterance.onstart = () => {
       const source = ctx.createBufferSource();
