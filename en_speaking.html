@@ -73,7 +73,6 @@
       border-radius: 8px;
       border: 1px solid #e9ecef;
     }
-    /* すべての波形コンテナの下余白（margin-bottom）を揃える */
     .canvas-container {
       height: 50px;
       margin-top: 6px;
@@ -82,7 +81,6 @@
       border-radius: 4px;
       overflow: hidden;
     }
-    /* 録音ブロック内の波形と下ボタンの間のみ間隔を空ける */
     .canvas-container.has-bottom-btn {
       margin-bottom: 8px;
     }
@@ -200,7 +198,7 @@
 </div>
 
 <script>
-  // 日常会話で高頻度に使用される基本英単語500語（品詞付き）
+  // 日常会話500語リスト
   const masterWords = [
     { en: "a", pos: "冠", ja: "1つの" }, { en: "about", pos: "前", ja: "〜について" },
     { en: "above", pos: "前", ja: "〜の上に" }, { en: "across", pos: "前", ja: "〜を横切って" },
@@ -625,6 +623,62 @@
     return matches ? Math.max(1, matches.length) : 1;
   }
 
+  // 小さな雑音・環境ノイズもトリミングする強めのトリミング処理
+  function trimAudioBuffer(buffer) {
+    const ctx = getAudioContext();
+    const data = buffer.getChannelData(0);
+    const sampleRate = buffer.sampleRate;
+    
+    // 雑音を検知・除外するための高めの閾値（振幅ベースおよび実効値RMSベース）
+    const thresholdPeak = 0.04; 
+    const windowSize = Math.floor(sampleRate * 0.01); // 10ms単位で音量を判定
+    
+    let startFrame = 0;
+    let endFrame = data.length - 1;
+
+    // 前方の小さな雑音・息音をスキップ（喋り出し部分を探す）
+    for (let i = 0; i < data.length - windowSize; i += windowSize) {
+      let sum = 0;
+      for (let j = 0; j < windowSize; j++) {
+        sum += data[i + j] * data[i + j];
+      }
+      const rms = Math.sqrt(sum / windowSize);
+      
+      // 10ms間の平均音量（RMS）または最大振幅が閾値を超えたら「声」と判定
+      if (rms > thresholdPeak || Math.abs(data[i]) > thresholdPeak * 1.5) {
+        startFrame = i;
+        break;
+      }
+    }
+
+    // 後方の雑音をスキップ（喋り終わり部分を探す）
+    for (let i = data.length - windowSize; i > startFrame; i -= windowSize) {
+      let sum = 0;
+      for (let j = 0; j < windowSize; j++) {
+        sum += data[i + j] * data[i + j];
+      }
+      const rms = Math.sqrt(sum / windowSize);
+      
+      if (rms > thresholdPeak || Math.abs(data[i]) > thresholdPeak * 1.5) {
+        endFrame = i + windowSize;
+        break;
+      }
+    }
+
+    // 音の語頭・語尾が不自然に切れないようマージン（0.03秒）を残す
+    const padding = Math.floor(sampleRate * 0.03);
+    startFrame = Math.max(0, startFrame - padding);
+    endFrame = Math.min(data.length - 1, endFrame + padding);
+
+    const trimmedLength = Math.max(1, endFrame - startFrame + 1);
+    const trimmedBuffer = ctx.createBuffer(buffer.numberOfChannels, trimmedLength, sampleRate);
+
+    for (let i = 0; i < buffer.numberOfChannels; i++) {
+      trimmedBuffer.getChannelData(i).set(buffer.getChannelData(i).subarray(startFrame, endFrame + 1));
+    }
+    return trimmedBuffer;
+  }
+
   // 500語からランダムに10個抽出
   function initSession() {
     const shuffled = [...masterWords].sort(() => 0.5 - Math.random());
@@ -699,29 +753,6 @@
 
     nativeAudioBuffer = trimAudioBuffer(buffer);
     drawWaveform(nativeCanvas, nativeAudioBuffer, '#3498db');
-  }
-
-  // 無音削除処理
-  function trimAudioBuffer(buffer, threshold = 0.015) {
-    const ctx = getAudioContext();
-    const data = buffer.getChannelData(0);
-    let start = 0;
-    let end = data.length - 1;
-
-    while (start < data.length && Math.abs(data[start]) < threshold) start++;
-    while (end > start && Math.abs(data[end]) < threshold) end--;
-
-    const padding = Math.floor(buffer.sampleRate * 0.02);
-    start = Math.max(0, start - padding);
-    end = Math.min(data.length - 1, end + padding);
-
-    const trimmedLength = Math.max(1, end - start + 1);
-    const trimmedBuffer = ctx.createBuffer(buffer.numberOfChannels, trimmedLength, buffer.sampleRate);
-
-    for (let i = 0; i < buffer.numberOfChannels; i++) {
-      trimmedBuffer.getChannelData(i).set(buffer.getChannelData(i).subarray(start, end + 1));
-    }
-    return trimmedBuffer;
   }
 
   // 単一波形の描画
@@ -811,7 +842,7 @@
     window.speechSynthesis.speak(utterance);
   });
 
-  // 2. 録音処理
+  // 2. 録音処理（ノイズカット・雑音トリミングを実行）
   recordBtn.addEventListener('click', async () => {
     const ctx = getAudioContext();
 
@@ -835,8 +866,10 @@
         const arrayBuffer = await rawBlob.arrayBuffer();
         const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
 
+        // ★雑音・ノイズを除外する強化版トリミング処理を適用
         userAudioBuffer = trimAudioBuffer(decodedBuffer);
 
+        // 波形描画
         drawWaveform(userCanvas, userAudioBuffer, '#2ecc71');
         drawBothWaveform();
 
