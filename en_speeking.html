@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listening-Speaking Lesson</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h1.app-title {
+      color: #2c3e50;
+      font-size: 2rem;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 460px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .word-counter {
+      font-size: 0.95rem;
+      color: #7f8c8d;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .word-display {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .word-meaning {
+      font-size: 1.1rem;
+      color: #7f8c8d;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .pos-tag {
+      font-size: 0.85rem;
+      background-color: #e2e8f0;
+      color: #4a5568;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-right: 6px;
+      font-weight: bold;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .audio-block {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+    /* すべての波形コンテナの下余白（margin-bottom）を揃える */
+    .canvas-container {
+      height: 50px;
+      margin-top: 6px;
+      margin-bottom: 0;
+      background: #2c3e50;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    /* 録音ブロック内の波形と下ボタンの間のみ間隔を空ける */
+    .canvas-container.has-bottom-btn {
+      margin-bottom: 8px;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    button {
+      width: 100%;
+      padding: 12px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: bold;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-native { background-color: #3498db; color: white; }
+    .btn-native:hover:not(:disabled) { background-color: #2980b9; }
+    
+    .btn-rec { background-color: #2ecc71; color: white; }
+    .btn-rec:hover:not(:disabled) { background-color: #27ae60; }
+    .btn-rec.recording {
+      animation: pulse 1.5s infinite;
+      background-color: #e74c3c;
+    }
+
+    .btn-user { background-color: #1abc9c; color: white; }
+    .btn-user:hover:not(:disabled) { background-color: #16a085; }
+
+    .btn-both { background-color: #f39c12; color: white; }
+    .btn-both:hover:not(:disabled) { background-color: #d68910; }
+
+    .btn-next { background-color: #9b59b6; color: white; margin-top: 10px; }
+    .btn-next:hover { background-color: #8e44ad; }
+
+    .finish-screen {
+      display: none;
+    }
+    .finish-screen h2 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    .finish-screen p {
+      color: #7f8c8d;
+      margin-bottom: 25px;
+    }
+    .btn-restart {
+      background-color: #34495e;
+      color: white;
+    }
+    .btn-restart:hover {
+      background-color: #2c3e50;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+<h1 class="app-title">Listening-Speaking Lesson</h1>
+
+<div class="card">
+  <!-- メイン練習エリア -->
+  <div id="quizArea">
+    <div class="word-counter" id="wordCounter">1 / 10</div>
+    <div class="word-display" id="wordDisplay">apple</div>
+    <div class="word-meaning" id="wordMeaning"><span class="pos-tag">名</span>りんご</div>
+
+    <div class="controls">
+      <!-- ネイティブ発音ブロック -->
+      <div class="audio-block">
+        <button class="btn-native" id="playNativeBtn">🔊 ネイティブの発音を聴く</button>
+        <div class="canvas-container">
+          <canvas id="nativeCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- 録音・自分の発音ブロック -->
+      <div class="audio-block">
+        <button class="btn-rec" id="recordBtn">🎙️ 録音を開始する</button>
+        <div class="canvas-container has-bottom-btn">
+          <canvas id="userCanvas"></canvas>
+        </div>
+        <button class="btn-user" id="playUserBtn" disabled>🔊 自分の発音を聴く</button>
+      </div>
+
+      <!-- 同時再生ブロック -->
+      <div class="audio-block">
+        <button class="btn-both" id="playBothBtn" disabled>🎧 両方の発音を同時に聴く</button>
+        <div class="canvas-container">
+          <canvas id="bothCanvas"></canvas>
+        </div>
+      </div>
+
+      <button class="btn-next" id="nextWordBtn">次へ ➔</button>
+    </div>
+  </div>
+
+  <!-- 終了画面エリア -->
+  <div id="finishArea" class="finish-screen">
+    <h2>🎉 Lesson Complete!</h2>
+    <p>10問の練習が完了しました。</p>
+    <button class="btn-restart" id="restartBtn">🔄 新しい10問で練習する</button>
+  </div>
+</div>
+
+<script>
+  // 日常会話で高頻度に使用される基本英単語500語（品詞付き）
+  const masterWords = [
+    { en: "a", pos: "冠", ja: "1つの" }, { en: "about", pos: "前", ja: "〜について" },
+    { en: "above", pos: "前", ja: "〜の上に" }, { en: "across", pos: "前", ja: "〜を横切って" },
+    { en: "action", pos: "名", ja: "行動" }, { en: "actor", pos: "名", ja: "俳優" },
+    { en: "add", pos: "動", ja: "加える" }, { en: "address", pos: "名", ja: "住所" },
+    { en: "advice", pos: "名", ja: "助言" }, { en: "afraid", pos: "形", ja: "恐れて" },
+    { en: "after", pos: "前", ja: "〜の後に" }, { en: "afternoon", pos: "名", ja: "午後" },
+    { en: "again", pos: "副", ja: "再び" }, { en: "against", pos: "前", ja: "〜に反対して" },
+    { en: "age", pos: "名", ja: "年齢" }, { en: "ago", pos: "副", ja: "〜前に" },
+    { en: "agree", pos: "動", ja: "賛成する" }, { en: "air", pos: "名", ja: "空気" },
+    { en: "airport", pos: "名", ja: "空港" }, { en: "all", pos: "形", ja: "すべての" },
+    { en: "allow", pos: "動", ja: "許す" }, { en: "almost", pos: "副", ja: "ほとんど" },
+    { en: "alone", pos: "形", ja: "1人で" }, { en: "already", pos: "副", ja: "すでに" },
+    { en: "also", pos: "副", ja: "〜もまた" }, { en: "always", pos: "副", ja: "いつも" },
+    { en: "and", pos: "接", ja: "そして" }, { en: "angry", pos: "形", ja: "怒った" },
+    { en: "animal", pos: "名", ja: "動物" }, { en: "another", pos: "形", ja: "もう1つの" },
+    { en: "answer", pos: "動", ja: "答える" }, { en: "any", pos: "形", ja: "いくつかの" },
+    { en: "anyone", pos: "代", ja: "誰か" }, { en: "anything", pos: "代", ja: "何か" },
+    { en: "apartment", pos: "名", ja: "アパート" }, { en: "apple", pos: "名", ja: "りんご" },
+    { en: "area", pos: "名", ja: "地域" }, { en: "arm", pos: "名", ja: "腕" },
+    { en: "around", pos: "前", ja: "〜のまわりに" }, { en: "arrive", pos: "動", ja: "到着する" },
+    { en: "art", pos: "名", ja: "芸術" }, { en: "as", pos: "前", ja: "〜として" },
+    { en: "ask", pos: "動", ja: "尋ねる" }, { en: "at", pos: "前", ja: "〜で" },
+    { en: "aunt", pos: "名", ja: "叔母" }, { en: "autumn", pos: "名", ja: "秋" },
+    { en: "away", pos: "副", ja: "離れて" }, { en: "baby", pos: "名", ja: "赤ん坊" },
+    { en: "back", pos: "副", ja: "後ろへ" }, { en: "bad", pos: "形", ja: "悪い" },
+    { en: "bag", pos: "名", ja: "かばん" }, { en: "ball", pos: "名", ja: "ボール" },
+    { en: "banana", pos: "名", ja: "バナナ" }, { en: "bank", pos: "名", ja: "銀行" },
+    { en: "bath", pos: "名", ja: "入浴" }, { en: "be", pos: "動", ja: "〜である" },
+    { en: "beach", pos: "名", ja: "浜辺" }, { en: "beautiful", pos: "形", ja: "美しい" },
+    { en: "because", pos: "接", ja: "なぜなら" }, { en: "become", pos: "動", ja: "〜になる" },
+    { en: "bed", pos: "名", ja: "ベッド" }, { en: "bedroom", pos: "名", ja: "寝室" },
+    { en: "before", pos: "前", ja: "〜の前に" }, { en: "begin", pos: "動", ja: "始める" },
+    { en: "behind", pos: "前", ja: "〜の後ろに" }, { en: "believe", pos: "動", ja: "信じる" },
+    { en: "below", pos: "前", ja: "〜の下に" }, { en: "best", pos: "形", ja: "最もよい" },
+    { en: "better", pos: "形", ja: "よりよい" }, { en: "between", pos: "前", ja: "〜の間に" },
+    { en: "big", pos: "形", ja: "大きい" }, { en: "bike", pos: "名", ja: "自転車" },
+    { en: "bird", pos: "名", ja: "鳥" }, { en: "birthday", pos: "名", ja: "誕生日" },
+    { en: "black", pos: "形", ja: "黒い" }, { en: "blue", pos: "形", ja: "青い" },
+    { en: "boat", pos: "名", ja: "ボート" }, { en: "body", pos: "名", ja: "身体" },
+    { en: "book", pos: "名", ja: "本" }, { en: "bored", pos: "形", ja: "退屈した" },
+    { en: "boring", pos: "形", ja: "退屈な" }, { en: "born", pos: "動", ja: "生まれた" },
+    { en: "both", pos: "形", ja: "両方の" }, { en: "bottle", pos: "名", ja: "瓶" },
+    { en: "box", pos: "名", ja: "箱" }, { en: "boy", pos: "名", ja: "少年" },
+    { en: "bread", pos: "名", ja: "パン" }, { en: "break", pos: "動", ja: "壊す" },
+    { en: "breakfast", pos: "名", ja: "朝食" }, { en: "bridge", pos: "名", ja: "橋" },
+    { en: "bring", pos: "動", ja: "持ってくる" }, { en: "brother", pos: "名", ja: "兄弟" },
+    { en: "brown", pos: "形", ja: "茶色い" }, { en: "build", pos: "動", ja: "建て増す" },
+    { en: "building", pos: "名", ja: "建物" }, { en: "bus", pos: "名", ja: "バス" },
+    { en: "business", pos: "名", ja: "仕事" }, { en: "busy", pos: "形", ja: "忙しい" },
+    { en: "but", pos: "接", ja: "しかし" }, { en: "butter", pos: "名", ja: "バター" },
+    { en: "buy", pos: "動", ja: "買う" }, { en: "by", pos: "前", ja: "〜によって" },
+    { en: "cake", pos: "名", ja: "ケーキ" }, { en: "calendar", pos: "名", ja: "カレンダー" },
+    { en: "call", pos: "動", ja: "電話する" }, { en: "camera", pos: "名", ja: "カメラ" },
+    { en: "can", pos: "助", ja: "〜できる" }, { en: "candy", pos: "名", ja: "キャンディー" },
+    { en: "cap", pos: "名", ja: "帽子" }, { en: "car", pos: "名", ja: "車" },
+    { en: "card", pos: "名", ja: "カード" }, { en: "careful", pos: "形", ja: "注意深い" },
+    { en: "cat", pos: "名", ja: "猫" }, { en: "catch", pos: "動", ja: "捕まえる" },
+    { en: "center", pos: "名", ja: "中心" }, { en: "chair", pos: "名", ja: "椅子" },
+    { en: "chance", pos: "名", ja: "機会" }, { en: "change", pos: "動", ja: "変える" },
+    { en: "cheap", pos: "形", ja: "安い" }, { en: "check", pos: "動", ja: "確認する" },
+    { en: "cheese", pos: "名", ja: "チーズ" }, { en: "chicken", pos: "名", ja: "鶏肉" },
+    { en: "child", pos: "名", ja: "子供" }, { en: "children", pos: "名", ja: "子供たち" },
+    { en: "chocolate", pos: "名", ja: "チョコレート" }, { en: "choose", pos: "動", ja: "選ぶ" },
+    { en: "church", pos: "名", ja: "教会" }, { en: "city", pos: "名", ja: "都市" },
+    { en: "class", pos: "名", ja: "授業" }, { en: "classmate", pos: "名", ja: "同級生" },
+    { en: "classroom", pos: "名", ja: "教室" }, { en: "clean", pos: "動", ja: "掃除する" },
+    { en: "clear", pos: "形", ja: "明確な" }, { en: "climb", pos: "動", ja: "登る" },
+    { en: "clock", pos: "名", ja: "時計" }, { en: "close", pos: "動", ja: "閉じる" },
+    { en: "clothes", pos: "名", ja: "服" }, { en: "cloudy", pos: "形", ja: "くもりの" },
+    { en: "club", pos: "名", ja: "部活" }, { en: "coat", pos: "名", ja: "コート" },
+    { en: "coffee", pos: "名", ja: "コーヒー" }, { en: "cold", pos: "形", ja: "寒い" },
+    { en: "collect", pos: "動", ja: "集める" }, { en: "college", pos: "名", ja: "大学" },
+    { en: "color", pos: "名", ja: "色" }, { en: "come", pos: "動", ja: "来る" },
+    { en: "company", pos: "名", ja: "会社" }, { en: "computer", pos: "名", ja: "コンピュータ" },
+    { en: "concert", pos: "名", ja: "演奏会" }, { en: "convenient", pos: "形", ja: "便利な" },
+    { en: "cook", pos: "動", ja: "料理する" }, { en: "cool", pos: "形", ja: "涼しい" },
+    { en: "corner", pos: "名", ja: "角" }, { en: "correct", pos: "形", ja: "正しい" },
+    { en: "cost", pos: "動", ja: "費用がかかる" }, { en: "country", pos: "名", ja: "国" },
+    { en: "cousin", pos: "名", ja: "いとこ" }, { en: "cover", pos: "動", ja: "覆う" },
+    { en: "cow", pos: "名", ja: "メス牛" }, { en: "cream", pos: "名", ja: "クリーム" },
+    { en: "cry", pos: "動", ja: "泣く" }, { en: "cup", pos: "名", ja: "カップ" },
+    { en: "cut", pos: "動", ja: "切る" }, { en: "cute", pos: "形", ja: "かわいい" },
+    { en: "dad", pos: "名", ja: "お父さん" }, { en: "daily", pos: "形", ja: "毎日の" },
+    { en: "dance", pos: "動", ja: "踊る" }, { en: "dangerous", pos: "形", ja: "危険な" },
+    { en: "dark", pos: "形", ja: "暗い" }, { en: "date", pos: "名", ja: "日付" },
+    { en: "daughter", pos: "名", ja: "娘" }, { en: "day", pos: "名", ja: "日" },
+    { en: "dead", pos: "形", ja: "死んだ" }, { en: "decide", pos: "動", ja: "決定する" },
+    { en: "delicious", pos: "形", ja: "美味しい" }, { en: "desk", pos: "名", ja: "机" },
+    { en: "dictionary", pos: "名", ja: "辞書" }, { en: "die", pos: "動", ja: "死ぬ" },
+    { en: "different", pos: "形", ja: "異なる" }, { en: "difficult", pos: "形", ja: "難しい" },
+    { en: "dinner", pos: "名", ja: "夕食" }, { en: "dirty", pos: "形", ja: "汚い" },
+    { en: "discover", pos: "動", ja: "発見する" }, { en: "dish", pos: "名", ja: "皿" },
+    { en: "do", pos: "動", ja: "〜する" }, { en: "doctor", pos: "名", ja: "医者" },
+    { en: "dog", pos: "名", ja: "犬" }, { en: "door", pos: "名", ja: "ドア" },
+    { en: "down", pos: "副", ja: "下へ" }, { en: "draw", pos: "動", ja: "描く" },
+    { en: "dream", pos: "名", ja: "夢" }, { en: "dress", pos: "名", ja: "ドレス" },
+    { en: "drink", pos: "動", ja: "飲む" }, { en: "drive", pos: "動", ja: "運転する" },
+    { en: "driver", pos: "名", ja: "運転手" }, { en: "drop", pos: "動", ja: "落とす" },
+    { en: "dry", pos: "形", ja: "乾いた" }, { en: "during", pos: "前", ja: "〜の間に" },
+    { en: "each", pos: "形", ja: "それぞれの" }, { en: "early", pos: "副", ja: "早く" },
+    { en: "earth", pos: "名", ja: "地球" }, { en: "easy", pos: "形", ja: "簡単な" },
+    { en: "eat", pos: "動", ja: "食べる" }, { en: "egg", pos: "名", ja: "卵" },
+    { en: "eight", pos: "名", ja: "8" }, { en: "either", pos: "代", ja: "どちらか" },
+    { en: "email", pos: "名", ja: "Eメール" }, { en: "end", pos: "動", ja: "終わる" },
+    { en: "energy", pos: "名", ja: "エネルギー" }, { en: "engine", pos: "名", ja: "エンジン" },
+    { en: "enjoy", pos: "動", ja: "楽しむ" }, { en: "enough", pos: "形", ja: "十分な" },
+    { en: "enter", pos: "動", ja: "入る" }, { en: "evening", pos: "名", ja: "晩" },
+    { en: "event", pos: "名", ja: "出来事" }, { en: "ever", pos: "副", ja: "これまでに" },
+    { en: "every", pos: "形", ja: "あらゆる" }, { en: "everyone", pos: "代", ja: "みんな" },
+    { en: "everything", pos: "代", ja: "すべて" }, { en: "exciting", pos: "形", ja: "ワクワクさせる" },
+    { en: "excuse", pos: "動", ja: "許す" }, { en: "exercise", pos: "名", ja: "運動" },
+    { en: "expensive", pos: "形", ja: "高価な" }, { en: "experience", pos: "名", ja: "経験" },
+    { en: "explain", pos: "動", ja: "説明する" }, { en: "eye", pos: "名", ja: "目" },
+    { en: "face", pos: "名", ja: "顔" }, { en: "fact", pos: "名", ja: "事実" },
+    { en: "factory", pos: "名", ja: "工場" }, { en: "fall", pos: "動", ja: "落ちる" },
+    { en: "family", pos: "名", ja: "家族" }, { en: "famous", pos: "形", ja: "有名な" },
+    { en: "far", pos: "副", ja: "遠くに" }, { en: "farm", pos: "名", ja: "農場" },
+    { en: "fast", pos: "副", ja: "速く" }, { en: "father", pos: "名", ja: "父親" },
+    { en: "favorite", pos: "形", ja: "お気に入りの" }, { en: "feel", pos: "動", ja: "感じる" },
+    { en: "few", pos: "形", ja: "ほとんど〜ない" }, { en: "field", pos: "名", ja: "野原" },
+    { en: "fifteen", pos: "名", ja: "15" }, { en: "fifty", pos: "名", ja: "50" },
+    { en: "fight", pos: "動", ja: "戦う" }, { en: "fill", pos: "動", ja: "満たす" },
+    { en: "movie", pos: "名", ja: "映画" }, { en: "final", pos: "形", ja: "最後の" },
+    { en: "find", pos: "動", ja: "見つける" }, { en: "fine", pos: "形", ja: "元気な" },
+    { en: "finger", pos: "名", ja: "指" }, { en: "finish", pos: "動", ja: "終える" },
+    { en: "fire", pos: "名", ja: "火" }, { en: "first", pos: "形", ja: "最初の" },
+    { en: "fish", pos: "名", ja: "魚" }, { en: "fit", pos: "動", ja: "適合する" },
+    { en: "five", pos: "名", ja: "5" }, { en: "fix", pos: "動", ja: "修理する" },
+    { en: "flag", pos: "名", ja: "旗" }, { en: "floor", pos: "名", ja: "床" },
+    { en: "flower", pos: "名", ja: "花" }, { en: "fly", pos: "動", ja: "飛ぶ" },
+    { en: "food", pos: "名", ja: "食べ物" }, { en: "foot", pos: "名", ja: "足" },
+    { en: "football", pos: "名", ja: "サッカー" }, { en: "for", pos: "前", ja: "〜のために" },
+    { en: "forest", pos: "名", ja: "森" }, { en: "forget", pos: "動", ja: "忘れる" },
+    { en: "four", pos: "名", ja: "4" }, { en: "free", pos: "形", ja: "自由な" },
+    { en: "fresh", pos: "形", ja: "新鮮な" }, { en: "friday", pos: "名", ja: "金曜日" },
+    { en: "friend", pos: "名", ja: "友達" }, { en: "friendly", pos: "形", ja: "友好的な" },
+    { en: "from", pos: "前", ja: "〜から" }, { en: "front", pos: "名", ja: "正面" },
+    { en: "fruit", pos: "名", ja: "果物" }, { en: "full", pos: "形", ja: "満ちた" },
+    { en: "fun", pos: "名", ja: "楽しいこと" }, { en: "funny", pos: "形", ja: "面白い" },
+    { en: "future", pos: "名", ja: "未来" }, { en: "game", pos: "名", ja: "ゲーム" },
+    { en: "garden", pos: "名", ja: "庭" }, { en: "gas", pos: "名", ja: "気体" },
+    { en: "get", pos: "動", ja: "手に入れる" }, { en: "girl", pos: "名", ja: "少女" },
+    { en: "give", pos: "動", ja: "与える" }, { en: "glad", pos: "形", ja: "嬉しい" },
+    { en: "glass", pos: "名", ja: "コップ" }, { en: "go", pos: "動", ja: "行く" },
+    { en: "god", pos: "名", ja: "神" }, { en: "gold", pos: "名", ja: "金" },
+    { en: "good", pos: "形", ja: "良い" }, { en: "goodbye", pos: "間", ja: "さようなら" },
+    { en: "grandparents", pos: "名", ja: "祖父母" }, { en: "grass", pos: "名", ja: "草" },
+    { en: "great", pos: "形", ja: "素晴らしい" }, { en: "green", pos: "形", ja: "緑の" },
+    { en: "ground", pos: "名", ja: "地面" }, { en: "group", pos: "名", ja: "集団" },
+    { en: "grow", pos: "動", ja: "成長する" }, { en: "guess", pos: "動", ja: "推測する" },
+    { en: "guide", pos: "動", ja: "案内する" }, { en: "guitar", pos: "名", ja: "ギター" },
+    { en: "hair", pos: "名", ja: "髪の毛" }, { en: "half", pos: "名", ja: "半分" },
+    { en: "hand", pos: "名", ja: "手" }, { en: "happen", pos: "動", ja: "起こる" },
+    { en: "happy", pos: "形", ja: "幸せな" }, { en: "hard", pos: "形", ja: "難しい" },
+    { en: "hat", pos: "名", ja: "帽子" }, { en: "have", pos: "動", ja: "持っている" },
+    { en: "he", pos: "代", ja: "彼" }, { en: "head", pos: "名", ja: "頭" },
+    { en: "health", pos: "名", ja: "健康" }, { en: "healthy", pos: "形", ja: "健康的な" },
+    { en: "hear", pos: "動", ja: "聞こえる" }, { en: "heart", pos: "名", ja: "心" },
+    { en: "heavy", pos: "形", ja: "重い" }, { en: "hello", pos: "間", ja: "こんにちは" },
+    { en: "help", pos: "動", ja: "助ける" }, { en: "her", pos: "代", ja: "彼女の" },
+    { en: "here", pos: "副", ja: "ここに" }, { en: "high", pos: "形", ja: "高い" },
+    { en: "hill", pos: "名", ja: "丘" }, { en: "him", pos: "代", ja: "彼を" },
+    { en: "his", pos: "代", ja: "彼の" }, { en: "history", pos: "名", ja: "歴史" },
+    { en: "hit", pos: "動", ja: "打つ" }, { en: "hobby", pos: "名", ja: "趣味" },
+    { en: "hold", pos: "動", ja: "保持する" }, { en: "holiday", pos: "名", ja: "休日" },
+    { en: "home", pos: "名", ja: "家" }, { en: "homework", pos: "名", ja: "宿題" },
+    { en: "hope", pos: "動", ja: "望む" }, { en: "horse", pos: "名", ja: "馬" },
+    { en: "hospital", pos: "名", ja: "病院" }, { en: "hot", pos: "形", ja: "暑い" },
+    { en: "hotel", pos: "名", ja: "ホテル" }, { en: "hour", pos: "名", ja: "時間" },
+    { en: "house", pos: "名", ja: "家" }, { en: "how", pos: "副", ja: "どのように" },
+    { en: "however", pos: "副", ja: "しかし" }, { en: "hundred", pos: "名", ja: "100" },
+    { en: "hungry", pos: "形", ja: "空腹の" }, { en: "hurry", pos: "動", ja: "急ぐ" },
+    { en: "hurt", pos: "動", ja: "傷つける" }, { en: "husband", pos: "名", ja: "夫" },
+    { en: "ice", pos: "名", ja: "氷" }, { en: "idea", pos: "名", ja: "考え" },
+    { en: "if", pos: "接", ja: "もし〜なら" }, { en: "important", pos: "形", ja: "重要な" },
+    { en: "in", pos: "前", ja: "〜の中に" }, { en: "include", pos: "動", ja: "含む" },
+    { en: "information", pos: "名", ja: "情報" }, { en: "inside", pos: "前", ja: "内側に" },
+    { en: "interest", pos: "名", ja: "興味" }, { en: "interested", pos: "形", ja: "興味がある" },
+    { en: "interesting", pos: "形", ja: "面白い" }, { en: "internet", pos: "名", ja: "インターネット" },
+    { en: "into", pos: "前", ja: "〜の中へ" }, { en: "introduce", pos: "動", ja: "紹介する" },
+    { en: "island", pos: "名", ja: "島" }, { en: "it", pos: "代", ja: "それ" }, { en: "job", pos: "名", ja: "仕事" },
+    { en: "join", pos: "動", ja: "加わる" }, { en: "juice", pos: "名", ja: "ジュース" },
+    { en: "jump", pos: "動", ja: "跳ぶ" }, { en: "just", pos: "副", ja: "ちょうど" },
+    { en: "keep", pos: "動", ja: "保つ" }, { en: "key", pos: "名", ja: "鍵" },
+    { en: "kick", pos: "動", ja: "蹴る" }, { en: "kid", pos: "名", ja: "子供" },
+    { en: "kind", pos: "形", ja: "親切な" }, { en: "kitchen", pos: "名", ja: "台所" },
+    { en: "know", pos: "動", ja: "知っている" }, { en: "lake", pos: "名", ja: "湖" },
+    { en: "land", pos: "名", ja: "陸地" }, { en: "language", pos: "名", ja: "言語" },
+    { en: "large", pos: "形", ja: "大きい" }, { en: "last", pos: "形", ja: "最後の" },
+    { en: "late", pos: "形", ja: "遅れた" }, { en: "later", pos: "副", ja: "後で" },
+    { en: "laugh", pos: "動", ja: "笑う" }, { en: "lead", pos: "動", ja: "導く" },
+    { en: "learn", pos: "動", ja: "学ぶ" }, { en: "leave", pos: "動", ja: "去る" },
+    { en: "left", pos: "形", ja: "左の" }, { en: "leg", pos: "名", ja: "脚" },
+    { en: "lesson", pos: "名", ja: "授業" }, { en: "let", pos: "動", ja: "〜させる" },
+    { en: "letter", pos: "名", ja: "手紙" }, { en: "library", pos: "名", ja: "図書館" },
+    { en: "lie", pos: "動", ja: "横たわる" }, { en: "life", pos: "名", ja: "生活" },
+    { en: "light", pos: "名", ja: "光" }, { en: "like", pos: "動", ja: "好む" },
+    { en: "line", pos: "名", ja: "線" }, { en: "lion", pos: "名", ja: "ライオン" },
+    { en: "listen", pos: "動", ja: "聴く" }, { en: "little", pos: "形", ja: "小さな" },
+    { en: "live", pos: "動", ja: "住む" }, { en: "local", pos: "形", ja: "地元の" },
+    { en: "long", pos: "形", ja: "長い" }, { en: "look", pos: "動", ja: "見る" },
+    { en: "lose", pos: "動", ja: "失う" }, { en: "lot", pos: "名", ja: "たくさんのこと" },
+    { en: "loud", pos: "形", ja: "大声の" }, { en: "love", pos: "動", ja: "愛する" },
+    { en: "low", pos: "形", ja: "低い" }, { en: "lunch", pos: "名", ja: "昼食" },
+    { en: "machine", pos: "名", ja: "機械" }, { en: "magazine", pos: "名", ja: "雑誌" },
+    { en: "make", pos: "動", ja: "作る" }, { en: "man", pos: "名", ja: "男性" },
+    { en: "many", pos: "形", ja: "たくさんの" }, { en: "map", pos: "名", ja: "地図" },
+    { en: "market", pos: "名", ja: "市場" }, { en: "marry", pos: "動", ja: "結婚する" },
+    { en: "matter", pos: "名", ja: "事柄" }, { en: "may", pos: "助", ja: "〜かもしれない" },
+    { en: "me", pos: "代", ja: "私を" }, { en: "meal", pos: "名", ja: "食事" },
+    { en: "mean", pos: "動", ja: "意味する" }, { en: "meat", pos: "名", ja: "肉" },
+    { en: "meet", pos: "動", ja: "会う" }, { en: "member", pos: "名", ja: "メンバー" },
+    { en: "memory", pos: "名", ja: "記憶" }, { en: "menu", pos: "名", ja: "メニュー" },
+    { en: "message", pos: "名", ja: "伝言" }, { en: "milk", pos: "名", ja: "牛乳" },
+    { en: "mind", pos: "動", ja: "気にする" }, { en: "minute", pos: "名", ja: "分" },
+    { en: "miss", pos: "動", ja: "逃す" }, { en: "mistake", pos: "名", ja: "間違い" },
+    { en: "mom", pos: "名", ja: "ママ" }, { en: "moment", pos: "名", ja: "瞬間" },
+    { en: "monday", pos: "名", ja: "月曜日" }, { en: "money", pos: "名", ja: "お金" },
+    { en: "month", pos: "名", ja: "月" }, { en: "moon", pos: "名", ja: "月" },
+    { en: "more", pos: "形", ja: "より多くの" }, { en: "morning", pos: "名", ja: "朝" },
+    { en: "most", pos: "形", ja: "大部分の" }, { en: "mother", pos: "名", ja: "母親" },
+    { en: "mountain", pos: "名", ja: "山" }, { en: "mouth", pos: "名", ja: "口" },
+    { en: "move", pos: "動", ja: "動く" }, { en: "much", pos: "形", ja: "たくさんの" },
+    { en: "music", pos: "名", ja: "音楽" }, { en: "must", pos: "助", ja: "〜ねばならない" },
+    { en: "my", pos: "代", ja: "私の" }, { en: "name", pos: "名", ja: "名前" },
+    { en: "near", pos: "前", ja: "〜の近くに" }, { en: "need", pos: "動", ja: "必要とする" },
+    { en: "never", pos: "副", ja: "決して〜ない" }, { en: "new", pos: "形", ja: "新しい" },
+    { en: "news", pos: "名", ja: "ニュース" }, { en: "newspaper", pos: "名", ja: "新聞" },
+    { en: "next", pos: "形", ja: "次の" }, { en: "nice", pos: "形", ja: "良い" },
+    { en: "night", pos: "名", ja: "夜" }, { en: "no", pos: "副", ja: "いいえ" },
+    { en: "noise", pos: "名", ja: "騒音" }, { en: "noon", pos: "名", ja: "正午" },
+    { en: "north", pos: "名", ja: "北" }, { en: "nose", pos: "名", ja: "鼻" },
+    { en: "not", pos: "副", ja: "〜でない" }, { en: "note", pos: "名", ja: "メモ" },
+    { en: "nothing", pos: "代", ja: "何も〜ない" }, { en: "now", pos: "副", ja: "今" },
+    { en: "number", pos: "名", ja: "数" }, { en: "nurse", pos: "名", ja: "看護師" },
+    { en: "ocean", pos: "名", ja: "海洋" }, { en: "of", pos: "前", ja: "〜の" },
+    { en: "off", pos: "副", ja: "離れて" }, { en: "office", pos: "名", ja: "事務所" },
+    { en: "often", pos: "副", ja: "しばしば" }, { en: "oil", pos: "名", ja: "油" },
+    { en: "old", pos: "形", ja: "古い" }, { en: "on", pos: "前", ja: "〜の上に" },
+    { en: "once", pos: "副", ja: "一度" }, { en: "one", pos: "名", ja: "1" },
+    { en: "only", pos: "副", ja: "〜だけ" }, { en: "open", pos: "動", ja: "開く" },
+    { en: "or", pos: "接", ja: "または" }, { en: "orange", pos: "名", ja: "オレンジ" },
+    { en: "order", pos: "動", ja: "注文する" }, { en: "other", pos: "形", ja: "ほかの" },
+    { en: "our", pos: "代", ja: "私たちの" }, { en: "out", pos: "副", ja: "外へ" },
+    { en: "outside", pos: "前", ja: "外側に" }, { en: "over", pos: "前", ja: "〜の上に" },
+    { en: "own", pos: "形", ja: "自分自身の" }, { en: "page", pos: "名", ja: "ページ" },
+    { en: "pain", pos: "名", ja: "痛み" }, { en: "paint", pos: "動", ja: "描く" },
+    { en: "paper", pos: "名", ja: "紙" }, { en: "parent", pos: "名", ja: "親" },
+    { en: "park", pos: "名", ja: "公園" }, { en: "part", pos: "名", ja: "部分" },
+    { en: "party", pos: "名", ja: "パーティー" }, { en: "pass", pos: "動", ja: "通過する" },
+    { en: "pay", pos: "動", ja: "支払う" }, { en: "pen", pos: "名", ja: "ペン" },
+    { en: "pencil", pos: "名", ja: "鉛筆" }, { en: "people", pos: "名", ja: "人々" },
+    { en: "person", pos: "名", ja: "人" }, { en: "pet", pos: "名", ja: "ペット" },
+    { en: "phone", pos: "名", ja: "電話" }, { en: "photo", pos: "名", ja: "写真" },
+    { en: "piano", pos: "名", ja: "ピアノ" }, { en: "pick", pos: "動", ja: "選ぶ" },
+    { en: "picture", pos: "名", ja: "写真" }, { en: "piece", pos: "名", ja: "破片" },
+    { en: "place", pos: "名", ja: "場所" }, { en: "plan", pos: "名", ja: "計画" },
+    { en: "plane", pos: "名", ja: "飛行機" }, { en: "plant", pos: "名", ja: "植物" },
+    { en: "play", pos: "動", ja: "遊ぶ" }, { en: "player", pos: "名", ja: "選手" },
+    { en: "please", pos: "副", ja: "どうぞ" }, { en: "point", pos: "名", ja: "点" },
+    { en: "police", pos: "名", ja: "警察" }, { en: "pool", pos: "名", ja: "プール" },
+    { en: "poor", pos: "形", ja: "貧しい" }, { en: "popular", pos: "形", ja: "人気の" },
+    { en: "possible", pos: "形", ja: "可能な" }, { en: "power", pos: "名", ja: "力" },
+    { en: "practice", pos: "動", ja: "練習する" }, { en: "present", pos: "名", ja: "プレゼント" },
+    { en: "pretty", pos: "形", ja: "きれいな" }, { en: "price", pos: "名", ja: "価格" },
+    { en: "problem", pos: "名", ja: "問題" }, { en: "program", pos: "名", ja: "番組" },
+    { en: "pull", pos: "動", ja: "引く" }, { en: "push", pos: "動", ja: "押す" },
+    { en: "put", pos: "動", ja: "置く" }, { en: "question", pos: "名", ja: "質問" },
+    { en: "quick", pos: "形", ja: "素早い" }, { en: "quiet", pos: "形", ja: "静かな" },
+    { en: "radio", pos: "名", ja: "ラジオ" }, { en: "rain", pos: "名", ja: "雨" },
+    { en: "read", pos: "動", ja: "読む" }, { en: "ready", pos: "形", ja: "準備ができた" },
+    { en: "real", pos: "形", ja: "本物の" }, { en: "really", pos: "副", ja: "本当に" },
+    { en: "reason", pos: "名", ja: "理由" }, { en: "receive", pos: "動", ja: "受け取る" },
+    { en: "red", pos: "形", ja: "赤" }, { en: "remember", pos: "動", ja: "覚えておく" },
+    { en: "restaurant", pos: "名", ja: "レストラン" }, { en: "return", pos: "動", ja: "戻る" },
+    { en: "rice", pos: "名", ja: "米" }, { en: "rich", pos: "形", ja: "裕福な" },
+    { en: "ride", pos: "動", ja: "乗る" }, { en: "right", pos: "形", ja: "正しい" },
+    { en: "river", pos: "名", ja: "川" }, { en: "road", pos: "名", ja: "道路" }, { en: "room", pos: "名", ja: "部屋" },
+    { en: "run", pos: "動", ja: "走る" }, { en: "sad", pos: "形", ja: "悲しい" },
+    { en: "safe", pos: "形", ja: "安全な" }, { en: "salad", pos: "名", ja: "サラダ" },
+    { en: "same", pos: "形", ja: "同じ" }, { en: "save", pos: "動", ja: "救う" },
+    { en: "say", pos: "動", ja: "言う" }, { en: "school", pos: "名", ja: "学校" },
+    { en: "science", pos: "名", ja: "科学" }, { en: "sea", pos: "名", ja: "海" },
+    { en: "season", pos: "名", ja: "季節" }, { en: "seat", pos: "名", ja: "座席" },
+    { en: "second", pos: "形", ja: "2番目の" }, { en: "see", pos: "動", ja: "見る" },
+    { en: "seem", pos: "動", ja: "〜に思える" }, { en: "sell", pos: "動", ja: "売る" },
+    { en: "send", pos: "動", ja: "送る" }, { en: "sentence", pos: "名", ja: "文" },
+    { en: "set", pos: "動", ja: "置く" }, { en: "seven", pos: "名", ja: "7" },
+    { en: "shall", pos: "助", ja: "〜でしょう" }, { en: "she", pos: "代", ja: "彼女" },
+    { en: "ship", pos: "名", ja: "船" }, { en: "shirt", pos: "名", ja: "シャツ" },
+    { en: "shoe", pos: "名", ja: "靴" }, { en: "shop", pos: "名", ja: "店" },
+    { en: "short", pos: "形", ja: "短い" }, { en: "should", pos: "助", ja: "〜すべき" },
+    { en: "show", pos: "動", ja: "見せる" }, { en: "sick", pos: "形", ja: "病気の" },
+    { en: "side", pos: "名", ja: "側" }, { en: "sing", pos: "動", ja: "歌う" },
+    { en: "sister", pos: "名", ja: "姉妹" }, { en: "sit", pos: "動", ja: "座る" },
+    { en: "six", pos: "名", ja: "6" }, { en: "size", pos: "名", ja: "サイズ" },
+    { en: "sky", pos: "名", ja: "空" }, { en: "sleep", pos: "動", ja: "眠る" },
+    { en: "slow", pos: "形", ja: "遅い" }, { en: "small", pos: "形", ja: "小さい" },
+    { en: "smile", pos: "動", ja: "微笑む" }, { en: "snow", pos: "名", ja: "雪" },
+    { en: "so", pos: "副", ja: "だから" }, { en: "soccer", pos: "名", ja: "サッカー" },
+    { en: "some", pos: "形", ja: "いくつかの" }, { en: "someone", pos: "代", ja: "誰か" },
+    { en: "something", pos: "代", ja: "何か" }, { en: "sometimes", pos: "副", ja: "時々" },
+    { en: "son", pos: "名", ja: "息子" }, { en: "song", pos: "名", ja: "歌" },
+    { en: "soon", pos: "副", ja: "すぐに" }, { en: "sorry", pos: "形", ja: "ごめんなさい" },
+    { en: "sound", pos: "名", ja: "音" }, { en: "soup", pos: "名", ja: "スープ" },
+    { en: "south", pos: "名", ja: "南" }, { en: "space", pos: "名", ja: "宇宙" },
+    { en: "speak", pos: "動", ja: "話す" }, { en: "special", pos: "形", ja: "特別な" },
+    { en: "spend", pos: "動", ja: "過ごす" }, { en: "sport", pos: "名", ja: "スポーツ" },
+    { en: "spring", pos: "名", ja: "春" }, { en: "stand", pos: "動", ja: "立つ" },
+    { en: "star", pos: "名", ja: "星" }, { en: "start", pos: "動", ja: "始める" },
+    { en: "station", pos: "名", ja: "駅" }, { en: "stay", pos: "動", ja: "滞在する" },
+    { en: "step", pos: "名", ja: "歩み" }, { en: "still", pos: "副", ja: "まだ" },
+    { en: "stop", pos: "動", ja: "止まる" }, { en: "store", pos: "名", ja: "店" },
+    { en: "story", pos: "名", ja: "物語" }, { en: "street", pos: "名", ja: "通り" },
+    { en: "strong", pos: "形", ja: "強い" }, { en: "student", pos: "名", ja: "生徒" },
+    { en: "study", pos: "動", ja: "勉強する" }, { en: "subject", pos: "名", ja: "科目" },
+    { en: "subway", pos: "名", ja: "地下鉄" }, { en: "such", pos: "形", ja: "そのような" },
+    { en: "sugar", pos: "名", ja: "砂糖" }, { en: "summer", pos: "名", ja: "夏" },
+    { en: "sun", pos: "名", ja: "太陽" }, { en: "sunday", pos: "名", ja: "日曜日" },
+    { en: "supermarket", pos: "名", ja: "スーパー" }, { en: "sure", pos: "形", ja: "確信して" },
+    { en: "sweet", pos: "形", ja: "甘い" }, { en: "swim", pos: "動", ja: "泳ぐ" },
+    { en: "table", pos: "名", ja: "テーブル" }, { en: "take", pos: "動", ja: "取る" },
+    { en: "talk", pos: "動", ja: "話す" }, { en: "tall", pos: "形", ja: "背が高い" },
+    { en: "tea", pos: "名", ja: "お茶" }, { en: "teach", pos: "動", ja: "教える" },
+    { en: "teacher", pos: "名", ja: "先生" }, { en: "team", pos: "名", ja: "チーム" },
+    { en: "telephone", pos: "名", ja: "電話" }, { en: "tell", pos: "動", ja: "伝える" },
+    { en: "ten", pos: "名", ja: "10" }, { en: "tennis", pos: "名", ja: "テニス" },
+    { en: "test", pos: "名", ja: "テスト" }, { en: "than", pos: "前", ja: "〜よりも" },
+    { en: "thank", pos: "動", ja: "感謝する" }, { en: "that", pos: "代", ja: "あれ" },
+    { en: "the", pos: "冠", ja: "その" }, { en: "their", pos: "代", ja: "彼らの" },
+    { en: "them", pos: "代", ja: "彼らを" }, { en: "then", pos: "副", ja: "その時" },
+    { en: "there", pos: "副", ja: "そこに" }, { en: "these", pos: "代", ja: "これら" },
+    { en: "they", pos: "代", ja: "彼らは" }, { en: "thing", pos: "名", ja: "物" },
+    { en: "think", pos: "動", ja: "考える" }, { en: "this", pos: "代", ja: "これ" },
+    { en: "three", pos: "名", ja: "3" }, { en: "through", pos: "前", ja: "〜を通して" },
+    { en: "time", pos: "名", ja: "時間" }, { en: "to", pos: "前", ja: "〜へ" },
+    { en: "today", pos: "名", ja: "今日" }, { en: "together", pos: "副", ja: "一緒に" },
+    { en: "tomorrow", pos: "名", ja: "明日" }, { en: "tonight", pos: "名", ja: "今夜" },
+    { en: "too", pos: "副", ja: "〜もまた" }, { en: "top", pos: "名", ja: "頂上" },
+    { en: "touch", pos: "動", ja: "触る" }, { en: "town", pos: "名", ja: "町" },
+    { en: "train", pos: "名", ja: "電車" }, { en: "travel", pos: "動", ja: "旅行する" },
+    { en: "tree", pos: "名", ja: "木" }, { en: "trip", pos: "名", ja: "旅行" },
+    { en: "try", pos: "動", ja: "試す" }, { en: "turn", pos: "動", ja: "曲がる" },
+    { en: "tv", pos: "名", ja: "テレビ" }, { en: "two", pos: "名", ja: "2" },
+    { en: "uncle", pos: "名", ja: "叔父" }, { en: "under", pos: "前", ja: "〜の下に" },
+    { en: "understand", pos: "動", ja: "理解する" }, { en: "until", pos: "前", ja: "〜まで" },
+    { en: "up", pos: "副", ja: "上へ" }, { en: "use", pos: "動", ja: "使う" },
+    { en: "useful", pos: "形", ja: "役に立つ" }, { en: "usually", pos: "副", ja: "たいてい" },
+    { en: "vacation", pos: "名", ja: "休暇" }, { en: "very", pos: "副", ja: "とても" },
+    { en: "visit", pos: "動", ja: "訪問する" }, { en: "voice", pos: "名", ja: "声" },
+    { en: "wait", pos: "動", ja: "待つ" }, { en: "walk", pos: "動", ja: "歩く" },
+    { en: "wall", pos: "名", ja: "壁" }, { en: "want", pos: "動", ja: "欲しい" },
+    { en: "warm", pos: "形", ja: "暖かい" }, { en: "wash", pos: "動", ja: "洗う" },
+    { en: "watch", pos: "動", ja: "見る" }, { en: "water", pos: "名", ja: "水" },
+    { en: "way", pos: "名", ja: "道" }, { en: "we", pos: "代", ja: "私たちは" },
+    { en: "wear", pos: "動", ja: "着ている" }, { en: "weather", pos: "名", ja: "天気" },
+    { en: "week", pos: "名", ja: "週" }, { en: "weekend", pos: "名", ja: "週末" },
+    { en: "welcome", pos: "動", ja: "歓迎する" }, { en: "well", pos: "副", ja: "よく" },
+    { en: "west", pos: "名", ja: "西" }, { en: "what", pos: "代", ja: "何" },
+    { en: "when", pos: "副", ja: "いつ" }, { en: "where", pos: "副", ja: "どこ" },
+    { en: "which", pos: "代", ja: "どちら" }, { en: "white", pos: "形", ja: "白い" },
+    { en: "who", pos: "代", ja: "誰" }, { en: "why", pos: "副", ja: "なぜ" },
+    { en: "wife", pos: "名", ja: "妻" }, { en: "will", pos: "助", ja: "〜だろう" },
+    { en: "win", pos: "動", ja: "勝つ" }, { en: "wind", pos: "名", ja: "風" },
+    { en: "window", pos: "名", ja: "窓" }, { en: "winter", pos: "名", ja: "冬" },
+    { en: "with", pos: "前", ja: "〜と一緒に" }, { en: "without", pos: "前", ja: "〜なしで" },
+    { en: "woman", pos: "名", ja: "女性" }, { en: "wonderful", pos: "形", ja: "素晴らしい" },
+    { en: "word", pos: "名", ja: "単語" }, { en: "work", pos: "動", ja: "働く" },
+    { en: "world", pos: "名", ja: "世界" }, { en: "worry", pos: "動", ja: "心配する" },
+    { en: "write", pos: "動", ja: "書く" }, { en: "wrong", pos: "形", ja: "間違った" },
+    { en: "year", pos: "名", ja: "年" }, { en: "yellow", pos: "形", ja: "黄色い" },
+    { en: "yes", pos: "副", ja: "はい" }, { en: "yesterday", pos: "名", ja: "昨日" },
+    { en: "you", pos: "代", ja: "あなた" }, { en: "young", pos: "形", ja: "若い" },
+    { en: "your", pos: "代", ja: "あなたの" }, { en: "zoo", pos: "名", ja: "動物園" }
+  ];
+
+  let currentWords = [];
+  let currentWordIndex = 0;
+
+  let audioCtx = null;
+  let mediaRecorder = null;
+  let audioChunks = [];
+  
+  let nativeAudioBuffer = null;
+  let userAudioBuffer = null;
+
+  const quizArea = document.getElementById('quizArea');
+  const finishArea = document.getElementById('finishArea');
+  const wordDisplay = document.getElementById('wordDisplay');
+  const wordMeaning = document.getElementById('wordMeaning');
+  const wordCounter = document.getElementById('wordCounter');
+
+  const playNativeBtn = document.getElementById('playNativeBtn');
+  const recordBtn = document.getElementById('recordBtn');
+  const playUserBtn = document.getElementById('playUserBtn');
+  const playBothBtn = document.getElementById('playBothBtn');
+  const nextWordBtn = document.getElementById('nextWordBtn');
+  const restartBtn = document.getElementById('restartBtn');
+
+  const nativeCanvas = document.getElementById('nativeCanvas');
+  const userCanvas = document.getElementById('userCanvas');
+  const bothCanvas = document.getElementById('bothCanvas');
+
+  function getAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  // 音節数の算出関数
+  function countSyllables(word) {
+    word = word.toLowerCase().trim();
+    if (word.length <= 3) return 1;
+    word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+    word = word.replace(/^y/, '');
+    const matches = word.match(/[aeiouy]{1,2}/g);
+    return matches ? Math.max(1, matches.length) : 1;
+  }
+
+  // 500語からランダムに10個抽出
+  function initSession() {
+    const shuffled = [...masterWords].sort(() => 0.5 - Math.random());
+    currentWords = shuffled.slice(0, 10);
+    currentWordIndex = 0;
+    
+    quizArea.style.display = 'block';
+    finishArea.style.display = 'none';
+
+    updateWord();
+  }
+
+  // 表示更新
+  function updateWord() {
+    if (currentWordIndex >= currentWords.length) {
+      quizArea.style.display = 'none';
+      finishArea.style.display = 'block';
+      return;
+    }
+
+    const item = currentWords[currentWordIndex];
+    wordCounter.textContent = `${currentWordIndex + 1} / 10`;
+    wordDisplay.textContent = item.en;
+    wordMeaning.innerHTML = `<span class="pos-tag">${item.pos}</span>${item.ja}`;
+
+    playUserBtn.disabled = true;
+    playBothBtn.disabled = true;
+    userAudioBuffer = null;
+
+    if (currentWordIndex === currentWords.length - 1) {
+      nextWordBtn.textContent = '結果を見る ➔';
+    } else {
+      nextWordBtn.textContent = '次へ ➔';
+    }
+    
+    clearCanvas(nativeCanvas);
+    clearCanvas(userCanvas);
+    clearCanvas(bothCanvas);
+
+    renderNativeWaveform(item.en);
+  }
+
+  // ネイティブ音声波形描画処理
+  function renderNativeWaveform(text) {
+    const ctx = getAudioContext();
+    const sampleRate = ctx.sampleRate;
+    
+    const syllableCount = countSyllables(text);
+    const duration = Math.max(0.4, syllableCount * 0.28 + (text.length > 6 ? 0.15 : 0));
+    const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < data.length; i++) {
+      const t = i / sampleRate;
+      const progress = t / duration;
+
+      const globalEnvelope = Math.sin(progress * Math.PI);
+      const syllableProgress = (progress * syllableCount) % 1;
+      const currentSyllableIndex = Math.floor(progress * syllableCount);
+      
+      const accent = (currentSyllableIndex === 0) ? 1.0 : 0.75;
+      const syllableEnvelope = Math.sin(syllableProgress * Math.PI) * accent;
+
+      const f0 = 150;
+      const fundamental = Math.sin(2 * Math.PI * f0 * t);
+      const h1 = 0.5 * Math.sin(2 * Math.PI * (f0 * 2) * t);
+      const h2 = 0.3 * Math.sin(2 * Math.PI * (f0 * 3.2) * t);
+      const noise = (Math.random() - 0.5) * 0.08;
+
+      data[i] = (fundamental + h1 + h2 + noise) * globalEnvelope * syllableEnvelope * 0.6;
+    }
+
+    nativeAudioBuffer = trimAudioBuffer(buffer);
+    drawWaveform(nativeCanvas, nativeAudioBuffer, '#3498db');
+  }
+
+  // 無音削除処理
+  function trimAudioBuffer(buffer, threshold = 0.015) {
+    const ctx = getAudioContext();
+    const data = buffer.getChannelData(0);
+    let start = 0;
+    let end = data.length - 1;
+
+    while (start < data.length && Math.abs(data[start]) < threshold) start++;
+    while (end > start && Math.abs(data[end]) < threshold) end--;
+
+    const padding = Math.floor(buffer.sampleRate * 0.02);
+    start = Math.max(0, start - padding);
+    end = Math.min(data.length - 1, end + padding);
+
+    const trimmedLength = Math.max(1, end - start + 1);
+    const trimmedBuffer = ctx.createBuffer(buffer.numberOfChannels, trimmedLength, buffer.sampleRate);
+
+    for (let i = 0; i < buffer.numberOfChannels; i++) {
+      trimmedBuffer.getChannelData(i).set(buffer.getChannelData(i).subarray(start, end + 1));
+    }
+    return trimmedBuffer;
+  }
+
+  // 単一波形の描画
+  function drawWaveform(canvas, audioBuffer, color = '#2ecc71') {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width = canvas.parentElement.clientWidth || 400;
+    const height = canvas.height = canvas.parentElement.clientHeight || 50;
+    
+    ctx.clearRect(0, 0, width, height);
+    if (!audioBuffer) return;
+
+    const data = audioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / width);
+    const amp = height / 2;
+
+    ctx.fillStyle = color;
+
+    for (let i = 0; i < width; i++) {
+      let min = 1.0;
+      let max = -1.0;
+      for (let j = 0; j < step; j++) {
+        const datum = data[(i * step) + j];
+        if (datum !== undefined) {
+          if (datum < min) min = datum;
+          if (datum > max) max = datum;
+        }
+      }
+      if (min <= max) {
+        const barHeight = Math.max(2, (max - min) * amp);
+        const y = (1 + min) * amp;
+        ctx.fillRect(i, y, 1.5, barHeight);
+      }
+    }
+  }
+
+  // 重ね合わせ波形の描画
+  function drawBothWaveform() {
+    const ctx = bothCanvas.getContext('2d');
+    const width = bothCanvas.width = bothCanvas.parentElement.clientWidth || 400;
+    const height = bothCanvas.height = bothCanvas.parentElement.clientHeight || 50;
+
+    ctx.clearRect(0, 0, width, height);
+
+    if (nativeAudioBuffer) {
+      drawWaveformToContext(ctx, width, height, nativeAudioBuffer, 'rgba(52, 152, 219, 0.75)');
+    }
+
+    if (userAudioBuffer) {
+      drawWaveformToContext(ctx, width, height, userAudioBuffer, 'rgba(46, 204, 113, 0.75)');
+    }
+  }
+
+  function drawWaveformToContext(ctx, width, height, audioBuffer, color) {
+    const data = audioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / width);
+    const amp = height / 2;
+
+    ctx.fillStyle = color;
+    for (let i = 0; i < width; i++) {
+      let min = 1.0, max = -1.0;
+      for (let j = 0; j < step; j++) {
+        const datum = data[(i * step) + j];
+        if (datum !== undefined) {
+          if (datum < min) min = datum;
+          if (datum > max) max = datum;
+        }
+      }
+      if (min <= max) {
+        const barHeight = Math.max(2, (max - min) * amp);
+        const y = (1 + min) * amp;
+        ctx.fillRect(i, y, 1.5, barHeight);
+      }
+    }
+  }
+
+  function clearCanvas(canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // 1. ネイティブ再生
+  playNativeBtn.addEventListener('click', () => {
+    getAudioContext();
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(currentWords[currentWordIndex].en);
+    utterance.lang = 'en-US';
+    window.speechSynthesis.speak(utterance);
+  });
+
+  // 2. 録音処理
+  recordBtn.addEventListener('click', async () => {
+    const ctx = getAudioContext();
+
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      recordBtn.textContent = '処理中...';
+      recordBtn.disabled = true;
+      recordBtn.classList.remove('recording');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+
+      mediaRecorder.onstop = async () => {
+        const rawBlob = new Blob(audioChunks);
+        const arrayBuffer = await rawBlob.arrayBuffer();
+        const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+        userAudioBuffer = trimAudioBuffer(decodedBuffer);
+
+        drawWaveform(userCanvas, userAudioBuffer, '#2ecc71');
+        drawBothWaveform();
+
+        playUserBtn.disabled = false;
+        playBothBtn.disabled = false;
+        recordBtn.textContent = '🎙️ 録音を開始する';
+        recordBtn.disabled = false;
+
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      recordBtn.textContent = '⏹️ 録音を停止する';
+      recordBtn.classList.add('recording');
+    } catch (err) {
+      alert('マイクへのアクセスを許可してください。');
+      recordBtn.disabled = false;
+    }
+  });
+
+  // 3. 自分の発音再生
+  playUserBtn.addEventListener('click', () => {
+    if (!userAudioBuffer) return;
+    const ctx = getAudioContext();
+    const source = ctx.createBufferSource();
+    source.buffer = userAudioBuffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  });
+
+  // 4. 出だしを同期させて同時再生
+  playBothBtn.addEventListener('click', () => {
+    if (!userAudioBuffer) return;
+    const ctx = getAudioContext();
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(currentWords[currentWordIndex].en);
+    utterance.lang = 'en-US';
+
+    utterance.onstart = () => {
+      const source = ctx.createBufferSource();
+      source.buffer = userAudioBuffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  });
+
+  // 5. 次の単語へ
+  nextWordBtn.addEventListener('click', () => {
+    currentWordIndex++;
+    updateWord();
+  });
+
+  // 6. リスタート
+  restartBtn.addEventListener('click', () => {
+    initSession();
+  });
+
+  // 初期化
+  initSession();
+</script>
+
+</body>
+</html>
