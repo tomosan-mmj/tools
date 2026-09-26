@@ -3,59 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDFキーワード・プロパティ集計ツール (ソート対応)</title>
+    <title>PDFキーワード・プロパティ集計ツール</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- PDF.js library for local PDF parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
-        .table-container {
-            max-height: 75vh;
-            overflow-x: auto;
-            overflow-y: auto;
+        body {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            font-family: 'Inter', sans-serif;
         }
+        .table-container {
+            max-height: 65vh;
+            overflow: auto;
+        }
+        /* Sticky header for the table */
         th {
             position: sticky;
             top: 0;
             z-index: 10;
+            background-color: #f9fafb;
+        }
+        /* Smooth transition for hover effects */
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans p-4 md:p-8">
+<body class="p-4 md:p-8">
 
     <div class="max-w-[98%] mx-auto">
-        <h1 class="text-3xl font-bold mb-6 text-blue-700">PDFキーワード集計ツール (ソート対応)</h1>
+        <header class="mb-8">
+            <h1 class="text-3xl font-extrabold text-indigo-700 tracking-tight">PDFキーワード・プロパティ集計ツール</h1>
+            <p class="text-sm text-gray-500 mt-2">ブラウザ上で複数のPDFファイルを解析し、キーワードの出現回数とプロパティを集計します。（データは外部に送信されません）</p>
+        </header>
         
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8 border border-gray-200">
-            <h2 class="text-xl font-semibold mb-4">1. PDFファイルを選択</h2>
-            <p class="mb-4 text-sm text-gray-600">複数のPDFファイルを選択し、「集計を開始する」を押してください。ブラウザ内で安全に処理されます。</p>
-            
-            <input type="file" id="fileInput" multiple accept=".pdf" 
-                class="block w-full text-sm text-gray-500
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-md file:border-0
-                file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100 cursor-pointer border border-gray-300 rounded-md p-2">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Keyword Input Section -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-1 flex flex-col">
+                <h2 class="text-lg font-bold mb-3 text-gray-800 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                    検索キーワード
+                </h2>
+                <p class="text-xs text-gray-500 mb-2">スペース区切りで入力してください。</p>
+                <textarea id="keywordInput" class="w-full h-32 p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none flex-grow" placeholder="キーワードを入力..."></textarea>
+            </div>
+
+            <!-- File Input & Action Section -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold mb-3 text-gray-800 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        PDFファイル選択
+                    </h2>
+                    <input type="file" id="fileInput" multiple accept=".pdf" 
+                        class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2.5 file:px-4
+                        file:rounded-lg file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-indigo-50 file:text-indigo-700
+                        hover:file:bg-indigo-100 cursor-pointer border border-gray-300 rounded-lg p-2 mb-4 transition-all">
+                </div>
                 
-            <button id="processBtn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                集計を開始する
-            </button>
-            
-            <div id="errorMessage" class="mt-2 text-sm font-medium text-red-600 hidden"></div>
-            
-            <div id="status" class="mt-4 text-sm font-medium text-blue-600 hidden">
-                処理中... <span id="progressText">0 / 0</span> ファイル完了
+                <div>
+                    <button id="processBtn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-8 rounded-lg shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        集計を開始する
+                    </button>
+                    
+                    <div id="statusMessage" class="mt-3 text-sm font-medium rounded-lg p-3 hidden">
+                        <!-- Status text will be injected here -->
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div id="resultContainer" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 hidden">
-            <h2 class="text-xl font-semibold mb-4">2. 集計結果 <span class="text-sm font-normal text-gray-500 ml-2">※ 見出しをクリックするとソートできます</span></h2>
-            <div class="table-container border border-gray-200 rounded-md shadow-inner">
+        <!-- Results Table Section -->
+        <div id="resultContainer" class="bg-white rounded-xl shadow-sm border border-gray-200 hidden overflow-hidden">
+            <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-800">集計結果</h2>
+                <span class="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">※ 見出しをクリックしてソート</span>
+            </div>
+            <div class="table-container">
                 <table class="min-w-full divide-y divide-gray-200 text-sm" id="resultTable">
-                    <thead class="bg-gray-100" id="tableHeader">
-                        <!-- JSで動的にヘッダーを生成 -->
+                    <thead class="bg-gray-50 shadow-sm" id="tableHeader">
+                        <!-- Headers dynamically generated -->
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200" id="tableBody">
-                        <!-- JSで動的に結果行を生成 -->
+                        <!-- Rows dynamically generated -->
                     </tbody>
                 </table>
             </div>
@@ -63,58 +100,115 @@
     </div>
 
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        // Set up PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        const keywords = [
-            "探究", "言語能力", 
-            "情報活用能力", "情報", "表形式", "ICT", 
-            "AI", "メディアリテラシー", "プログラミング", "デジタル学習基盤"
-        ];
-
-        // テーブルの列定義
-        const columns = [
+        // Default keywords
+        const defaultKeywords = "学習者主体 探究 個別最適 言語能力 情報活用能力 情報 表形式 ICT AI メディアリテラシー プログラミング デジタル学習基盤";
+        
+        // Base columns definition (excluding dynamic keywords)
+        const baseColumns = [
             { key: 'filename', label: 'ファイル名', type: 'string', width: 'min-w-[200px]', align: 'left' },
             { key: 'title', label: 'タイトル', type: 'string', width: 'min-w-[150px]', align: 'left' },
             { key: 'author', label: '作成者', type: 'string', width: 'min-w-[120px]', align: 'left' },
             { key: 'rawDate', label: '更新日時', type: 'date', width: 'min-w-[130px]', align: 'center', displayKey: 'date' },
-            { key: 'pages', label: 'ページ数', type: 'number', width: 'min-w-[100px]', align: 'center', extraClass: 'border-r-4' }
+            { key: 'pages', label: 'ページ数', type: 'number', width: 'min-w-[80px]', align: 'center', extraClass: 'border-r-4 border-gray-300' }
         ];
 
-        // キーワード列を追加
-        keywords.forEach(kw => {
-            columns.push({ key: `kw_${kw}`, label: kw, type: 'number', isKeyword: true, align: 'center' });
-        });
-
-        // アプリケーションの状態
+        // Application State
+        let currentKeywords = [];
         let tableData = [];
-        let sortConfig = { key: null, direction: 1 }; // direction: 1 (昇順), -1 (降順)
+        let sortConfig = { key: null, direction: 1 }; // 1 for asc, -1 for desc
 
-        // UI要素の取得
+        // DOM Elements
+        const keywordInput = document.getElementById('keywordInput');
         const fileInput = document.getElementById('fileInput');
         const processBtn = document.getElementById('processBtn');
-        const statusDiv = document.getElementById('status');
-        const progressText = document.getElementById('progressText');
+        const statusMessage = document.getElementById('statusMessage');
         const resultContainer = document.getElementById('resultContainer');
         const tableHeader = document.getElementById('tableHeader');
         const tableBody = document.getElementById('tableBody');
-        const errorMessage = document.getElementById('errorMessage');
 
+        // Initialize textarea
+        keywordInput.value = defaultKeywords;
+
+        // Utility to escape regex special characters
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Parse keywords from textarea
+        function getKeywords() {
+            const rawText = keywordInput.value;
+            // Split by any whitespace and remove empty strings
+            return rawText.split(/\s+/).filter(kw => kw.trim().length > 0);
+        }
+
+        // Parse PDF custom date string (D:YYYYMMDDHHmmssZ)
+        function parsePdfDate(pdfDateStr) {
+            if (!pdfDateStr) return { formatted: '', timestamp: 0 };
+            
+            const match = pdfDateStr.match(/^D:(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+            if (match) {
+                const [_, y, m, d, h, min, s] = match;
+                const dateObj = new Date(`${y}-${m}-${d}T${h}:${min}:${s}Z`);
+                
+                return {
+                    formatted: `${y}/${m}/${d} ${h}:${min}`,
+                    timestamp: dateObj.getTime()
+                };
+            }
+            return { formatted: pdfDateStr, timestamp: 0 }; // Fallback
+        }
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            statusMessage.classList.remove('hidden', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+            
+            if (type === 'error') {
+                statusMessage.classList.add('bg-red-100', 'text-red-800');
+            } else if (type === 'success') {
+                statusMessage.classList.add('bg-green-100', 'text-green-800');
+            } else {
+                statusMessage.classList.add('bg-blue-100', 'text-blue-800');
+            }
+            
+            statusMessage.textContent = message;
+        }
+
+        // Generate current columns based on base columns + dynamic keywords
+        function getCurrentColumns() {
+            const cols = [...baseColumns];
+            currentKeywords.forEach(kw => {
+                cols.push({ 
+                    key: `kw_${kw}`, 
+                    label: kw, 
+                    type: 'number', 
+                    isKeyword: true, 
+                    align: 'center' 
+                });
+            });
+            return cols;
+        }
+
+        // Render table headers
         function renderHeaders() {
             tableHeader.innerHTML = '';
             const tr = document.createElement('tr');
+            const cols = getCurrentColumns();
             
-            columns.forEach(col => {
+            cols.forEach(col => {
                 const th = document.createElement('th');
                 const alignClass = col.align === 'left' ? 'text-left' : 'text-center';
-                const baseClasses = `px-3 py-3 font-bold text-gray-700 border-r border-gray-200 whitespace-nowrap cursor-pointer hover:bg-gray-200 select-none ${alignClass} ${col.width || ''} ${col.extraClass || ''}`;
+                const baseClasses = `px-4 py-3 font-bold text-gray-700 border-r border-gray-200 whitespace-nowrap cursor-pointer hover:bg-gray-200 select-none transition-colors ${alignClass} ${col.width || ''} ${col.extraClass || ''}`;
                 th.className = baseClasses;
                 
-                // ソートアイコンの表示
-                let icon = '<span class="text-gray-300 ml-1 text-xs">↕</span>'; // デフォルト
-                if (sortConfig.key === col.key) {
+                // Sort icon
+                let icon = '<span class="text-gray-300 ml-1 text-[10px]">↕</span>';
+                if (sortConfig.key === col.key || (col.isKeyword && sortConfig.key === `kw_${col.label}`)) {
                     icon = sortConfig.direction === 1 
-                        ? '<span class="text-blue-600 ml-1 text-xs">▲</span>' 
-                        : '<span class="text-blue-600 ml-1 text-xs">▼</span>';
+                        ? '<span class="text-indigo-600 ml-1 text-xs">▲</span>' 
+                        : '<span class="text-indigo-600 ml-1 text-xs">▼</span>';
                 }
 
                 th.innerHTML = `${col.label} ${icon}`;
@@ -124,24 +218,29 @@
             tableHeader.appendChild(tr);
         }
 
+        // Handle sorting event
         function handleSort(column) {
-            if (sortConfig.key === column.key) {
-                // 同じ列をクリックした場合は順序を反転
-                sortConfig.direction *= -1;
+            const sortKey = column.isKeyword ? `kw_${column.label}` : column.key;
+
+            if (sortConfig.key === sortKey) {
+                sortConfig.direction *= -1; // Toggle direction
             } else {
-                // 別の列をクリックした場合は昇順からスタート
-                sortConfig.key = column.key;
-                sortConfig.direction = 1;
+                sortConfig.key = sortKey;
+                sortConfig.direction = 1; // Default to ascending
             }
 
-            // データのソート
+            // Sort the data array
             tableData.sort((a, b) => {
-                // エラー行は常に末尾に置くなどの制御も可能ですが、今回は通常ソート
+                // Push errors to the bottom
+                if (a.isError && !b.isError) return 1;
+                if (!a.isError && b.isError) return -1;
+                if (a.isError && b.isError) return 0;
+
                 let valA, valB;
 
                 if (column.isKeyword) {
-                    valA = a.counts ? (a.counts[column.label] || 0) : -1;
-                    valB = b.counts ? (b.counts[column.label] || 0) : -1;
+                    valA = a.counts[column.label] || 0;
+                    valB = b.counts[column.label] || 0;
                 } else {
                     valA = a[column.key];
                     valB = b[column.key];
@@ -151,57 +250,58 @@
                     valA = valA || '';
                     valB = valB || '';
                     return valA.localeCompare(valB, 'ja') * sortConfig.direction;
-                } else if (column.type === 'number' || column.type === 'date') {
+                } else {
                     valA = valA || 0;
                     valB = valB || 0;
                     return (valA - valB) * sortConfig.direction;
                 }
-                return 0;
             });
 
             renderHeaders();
             renderTableBody();
         }
 
+        // Render the table data rows
         function renderTableBody() {
             tableBody.innerHTML = '';
+            const cols = getCurrentColumns();
             
             tableData.forEach(row => {
                 const tr = document.createElement('tr');
                 
                 if (row.isError) {
-                    tr.className = "bg-red-50";
+                    tr.className = "bg-red-50 hover:bg-red-100 transition-colors";
                     const nameTd = document.createElement('td');
-                    nameTd.className = "px-4 py-3 text-red-600 border-r border-gray-200 font-medium truncate max-w-xs";
+                    nameTd.className = "px-4 py-3 text-red-600 border-r border-gray-200 font-medium truncate max-w-[200px]";
                     nameTd.textContent = row.filename + " (エラー)";
+                    nameTd.title = row.errorMsg;
                     tr.appendChild(nameTd);
 
                     const errorTd = document.createElement('td');
-                    errorTd.className = "px-3 py-3 text-center text-red-500 font-bold";
-                    errorTd.colSpan = columns.length - 1;
+                    errorTd.className = "px-4 py-3 text-center text-red-500 font-bold";
+                    errorTd.colSpan = cols.length - 1;
                     errorTd.textContent = "ファイルの読み込みまたは解析に失敗しました";
                     tr.appendChild(errorTd);
                 } else {
-                    tr.className = "hover:bg-blue-50 transition-colors";
+                    tr.className = "hover:bg-indigo-50 transition-colors";
                     
-                    columns.forEach(col => {
+                    cols.forEach(col => {
                         const td = document.createElement('td');
                         const alignClass = col.align === 'left' ? 'text-left' : 'text-center';
-                        td.className = `px-3 py-3 border-r border-gray-200 ${alignClass} ${col.extraClass || ''}`;
+                        td.className = `px-4 py-3 border-r border-gray-200 ${alignClass} ${col.extraClass || ''}`;
                         
                         if (col.isKeyword) {
                             const count = row.counts[col.label] || 0;
                             td.textContent = count;
                             if (count > 0) {
-                                td.classList.add("text-blue-700", "font-bold", "bg-blue-50/40");
+                                td.classList.add("text-indigo-700", "font-bold", "bg-indigo-50");
                             } else {
                                 td.classList.add("text-gray-400");
                             }
                         } else {
-                            // 基本プロパティ列
                             const displayValue = col.displayKey ? row[col.displayKey] : row[col.key];
                             td.textContent = displayValue;
-                            td.title = displayValue; // ホバー時全表示用
+                            td.title = displayValue;
                             
                             if (col.key === 'filename') {
                                 td.classList.add('font-medium', 'text-gray-900', 'truncate', 'max-w-[200px]');
@@ -220,106 +320,25 @@
             });
         }
 
-        function parsePdfDateInfo(pdfDateStr) {
-            if (!pdfDateStr) return { formatted: '', timestamp: 0 };
-            const match = pdfDateStr.match(/^D:(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
-            if (match) {
-                const y = match[1];
-                const m = match[2];
-                const d = match[3];
-                const h = match[4];
-                const min = match[5];
-                const s = match[6];
-                
-                // ソート用のタイムスタンプを作成
-                const dateObj = new Date(`${y}-${m}-${d}T${h}:${min}:${s}Z`);
-                
-                return {
-                    formatted: `${y}/${m}/${d} ${h}:${min}`,
-                    timestamp: dateObj.getTime()
-                };
-            }
-            return { formatted: pdfDateStr, timestamp: 0 };
-        }
-
-        processBtn.addEventListener('click', async () => {
-            errorMessage.classList.add('hidden');
-            const files = fileInput.files;
-            
-            if (files.length === 0) {
-                errorMessage.textContent = "PDFファイルを選択してください。";
-                errorMessage.classList.remove('hidden');
-                return;
-            }
-
-            // 初期化
-            processBtn.disabled = true;
-            statusDiv.classList.remove('hidden');
-            resultContainer.classList.remove('hidden');
-            
-            // データをリセットして初期表示を構築
-            tableData = [];
-            sortConfig = { key: null, direction: 1 };
-            renderHeaders();
-            renderTableBody();
-            
-            let processedCount = 0;
-            progressText.textContent = `0 / ${files.length}`;
-
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                try {
-                    const result = await processPDF(file);
-                    tableData.push(result);
-                } catch (error) {
-                    console.error(`エラー (${file.name}):`, error);
-                    tableData.push({
-                        filename: file.name,
-                        isError: true,
-                        // ソート時にエラー行が下に沈むようにデフォルト値を設定
-                        rawDate: 0,
-                        pages: -1
-                    });
-                }
-                
-                processedCount++;
-                progressText.textContent = `${processedCount} / ${files.length}`;
-                
-                // 1件処理するごとにテーブルを再描画 (現在のソート順を維持)
-                if (sortConfig.key) {
-                    // ソート設定があれば強制的にソートし直す
-                    const currentSortCol = columns.find(c => c.key === sortConfig.key);
-                    if (currentSortCol) {
-                        // 状態を反転させないために一時的に保存して復元
-                        const tempDir = sortConfig.direction;
-                        sortConfig.direction = tempDir === 1 ? -1 : 1; // handleSort内で反転するので逆を入れる
-                        handleSort(currentSortCol);
-                    } else {
-                        renderTableBody();
-                    }
-                } else {
-                    renderTableBody();
-                }
-            }
-
-            // 完了時のUI更新
-            statusDiv.classList.add('hidden');
-            processBtn.disabled = false;
-        });
-
+        // Process a single PDF file
         async function processPDF(file) {
             const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             
+            // Load the PDF document
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+            
+            // Extract Metadata
             const meta = await pdf.getMetadata();
             const info = meta.info || {};
             const title = info.Title || '';
             const author = info.Author || '';
             
             const dateStr = info.ModDate || info.CreationDate || '';
-            const dateInfo = parsePdfDateInfo(dateStr);
+            const dateInfo = parsePdfDate(dateStr);
             const numPages = pdf.numPages;
 
+            // Extract Text
             let fullText = "";
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
@@ -328,9 +347,11 @@
                 fullText += pageText + " ";
             }
             
+            // Count Keywords
             const counts = {};
-            keywords.forEach(kw => {
-                const regex = new RegExp(kw, 'gi'); // g:全て検索 i:大文字小文字区別しない
+            currentKeywords.forEach(kw => {
+                const escapedKw = escapeRegExp(kw);
+                const regex = new RegExp(escapedKw, 'gi'); // Global, Case-insensitive
                 const matches = fullText.match(regex);
                 counts[kw] = matches ? matches.length : 0;
             });
@@ -340,14 +361,89 @@
                 title: title,
                 author: author,
                 date: dateInfo.formatted,
-                rawDate: dateInfo.timestamp, // ソート用の見えないデータ
+                rawDate: dateInfo.timestamp,
                 pages: numPages,
                 counts: counts,
                 isError: false
             };
         }
 
-        // 初回読み込み時のヘッダー描画
+        // Main Execution Event
+        processBtn.addEventListener('click', async () => {
+            const files = fileInput.files;
+            currentKeywords = getKeywords();
+            
+            if (files.length === 0) {
+                showStatus("PDFファイルを選択してください。", "error");
+                return;
+            }
+
+            if (currentKeywords.length === 0) {
+                showStatus("検索キーワードを1つ以上入力してください。", "error");
+                return;
+            }
+
+            // Lock UI
+            processBtn.disabled = true;
+            fileInput.disabled = true;
+            keywordInput.disabled = true;
+            resultContainer.classList.remove('hidden');
+            
+            // Reset Data
+            tableData = [];
+            sortConfig = { key: null, direction: 1 };
+            renderHeaders();
+            renderTableBody();
+            
+            let processedCount = 0;
+            showStatus(`処理中... 0 / ${files.length} ファイル完了`);
+
+            // Process files sequentially to avoid memory overload
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                try {
+                    const result = await processPDF(file);
+                    tableData.push(result);
+                } catch (error) {
+                    console.error(`Error processing ${file.name}:`, error);
+                    tableData.push({
+                        filename: file.name,
+                        isError: true,
+                        errorMsg: error.message,
+                        rawDate: 0,
+                        pages: -1
+                    });
+                }
+                
+                processedCount++;
+                showStatus(`処理中... ${processedCount} / ${files.length} ファイル完了`);
+                
+                // Re-sort and render after each file for progressive feedback
+                if (sortConfig.key) {
+                    // Temporarily reverse direction so handleSort flips it back correctly
+                    sortConfig.direction *= -1; 
+                    const colToDrop = getCurrentColumns().find(c => 
+                        c.key === sortConfig.key || `kw_${c.label}` === sortConfig.key
+                    );
+                    if (colToDrop) {
+                        handleSort(colToDrop);
+                    } else {
+                        renderTableBody();
+                    }
+                } else {
+                    renderTableBody();
+                }
+            }
+
+            // Unlock UI and show completion
+            showStatus(`集計完了！ ${files.length} 件のファイルを処理しました。`, "success");
+            processBtn.disabled = false;
+            fileInput.disabled = false;
+            keywordInput.disabled = false;
+        });
+
+        // Initial render for empty state
+        currentKeywords = getKeywords();
         renderHeaders();
     </script>
 </body>
